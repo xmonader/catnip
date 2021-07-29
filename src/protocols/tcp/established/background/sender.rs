@@ -89,7 +89,7 @@ pub async fn sender<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fail> {
         let effective_cwnd = cwnd + ltci;
 
         let Wrapping(sent_data) = sent_seq - base_seq;
-        if win_sz <= sent_data || effective_cwnd <= sent_data || (effective_cwnd - sent_data) <= cb.sender.mss as u32 {
+        if win_sz <= sent_data || effective_cwnd <= sent_data || (effective_cwnd - sent_data) <= cb.sender.mss as u32 || (win_sz - sent_data) <= cb.sender.mss as u32 {
             futures::select_biased! {
                 _ = base_seq_changed => continue 'top,
                 _ = sent_seq_changed => continue 'top,
