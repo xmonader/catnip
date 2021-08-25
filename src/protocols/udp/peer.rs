@@ -197,8 +197,8 @@ impl<RT: Runtime> UdpPeer<RT> {
         let listener = Listener::default();
         if inner
             .bound
-            .insert(addr, Rc::new(RefCell::new(listener)))
-            .is_some()
+                .insert(addr, Rc::new(RefCell::new(listener)))
+                .is_some()
         {
             return Err(Fail::AddressInUse {});
         }
