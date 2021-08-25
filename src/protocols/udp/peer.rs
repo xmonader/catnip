@@ -197,8 +197,8 @@ impl<RT: Runtime> UdpPeer<RT> {
         let listener = Listener::default();
         if inner
             .bound
-            .insert(addr, Rc::new(RefCell::new(listener)))
-            .is_some()
+                .insert(addr, Rc::new(RefCell::new(listener)))
+                .is_some()
         {
             return Err(Fail::AddressInUse {});
         }
@@ -304,11 +304,9 @@ impl<RT: Runtime> UdpPeer<RT> {
     pub fn pop(&self, fd: FileDescriptor) -> PopFuture<RT> {
         let inner = self.inner.borrow();
         let listener = match inner.sockets.get(&fd) {
-            Some(s) if s.local().is_some() && s.remote().is_some() => {
+            Some(s) if s.local().is_some() => {
                 Ok(inner.bound.get(&s.local().unwrap()).unwrap().clone())
             }
-            Some(s) if s.local().is_some() => Err(Fail::BadFileDescriptor {}),
-            Some(s) if s.remote().is_some() => Err(Fail::BadFileDescriptor {}),
             _ => Err(Fail::Malformed {
                 details: "Invalid file descriptor",
             }),
