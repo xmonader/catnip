@@ -3,7 +3,7 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 #![feature(allocator_api)]
 #![feature(alloc_layout_extra)]
-#![feature(const_fn, const_panic, const_alloc_layout)]
+#![feature(const_panic, const_alloc_layout)]
 #![feature(const_mut_refs, const_type_name)]
 #![feature(generators, generator_trait)]
 #![feature(new_uninit)]
