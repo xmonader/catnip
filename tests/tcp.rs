@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 #![feature(new_uninit)]
-#![feature(const_fn, const_panic, const_alloc_layout)]
+#![feature(const_panic, const_alloc_layout)]
 #![feature(const_mut_refs, const_type_name)]
 #![feature(maybe_uninit_uninit_array, maybe_uninit_extra, maybe_uninit_ref)]
 
