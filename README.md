@@ -26,12 +26,12 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh    # Get Rust too
 **3. Build Catnip**
 ```
 cd $WORKDIR/catnip    # Switch to working directory.
-cargo build               # Build catnip.
+cargo build           # Build catnip.
 ```
 
 **4. Run Regression Tests**
 ```
-cd $WORKDIR/catnip           # Switch to working directory.
+cd $WORKDIR/catnip               # Switch to working directory.
 cargo test -- --test-threads 1   # Run with a single-thread.
 ```
 
@@ -52,7 +52,7 @@ and feedback. Please send any questions or comments to one of the following
 maintainers of the project:
 
 - [Irene Zhang](https://github.com/iyzhang) - [irene.zhang@microsoft.com](mailto:irene.zhang@microsoft.com)
-- [Pedro Henrique Penna](https://github.com/ppenna) - [ppenna@microsoft.com](mailto:ppenna@microsoft.com).
+- [Pedro Henrique Penna](https://github.com/ppenna) - [ppenna@microsoft.com](mailto:ppenna@microsoft.com)
 
-> By sending feedback, you are consenting to your feedback being used in the
-> further development of this project.
+> By sending feedback, you are consenting that it may be used  in the further
+> development of this project.
