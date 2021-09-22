@@ -17,8 +17,9 @@ pub enum RetransmitCause {
 pub async fn retransmit<RT: Runtime>(
     cause: RetransmitCause,
     cb: &Rc<ControlBlock<RT>>,
-    ) -> Result<(), Fail> {
+) -> Result<(), Fail> {
 
+    // Pop unack'ed segment.
     let mut unacked_queue = cb.sender.unacked_queue.borrow_mut();
     let segment = match unacked_queue.front_mut() {
         Some(s) => s,
@@ -56,6 +57,7 @@ pub async fn retransmit<RT: Runtime>(
 
 pub async fn retransmitter<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fail> {
     loop {
+        // Pin future for timeout retransmission.
         let (rtx_deadline, rtx_deadline_changed) = cb.sender.retransmit_deadline.watch();
         futures::pin_mut!(rtx_deadline_changed);
         let rtx_future = match rtx_deadline {
