@@ -27,7 +27,10 @@ pub async fn retransmit<RT: Runtime>(
     let seq_no = cb.sender.base_seq_no.get();
     let segment = match unacked_queue.front_mut() {
         Some(s) => s,
-        None => panic!("Retransmission timer set with empty acknowledge queue"),
+        None => {
+            warn!("Retransmission with empty unacknowledged queue");
+            return Ok(());
+        },
     };
 
     // TODO: Repacketization
