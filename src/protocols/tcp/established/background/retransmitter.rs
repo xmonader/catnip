@@ -58,19 +58,24 @@ pub async fn retransmitter<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, F
     loop {
         let (rtx_deadline, rtx_deadline_changed) = cb.sender.retransmit_deadline.watch();
         futures::pin_mut!(rtx_deadline_changed);
-
-        // I assume any change to the fast retransmit flag is an instruction to transmit, because I use `set_without_notify` to change it
-        // back to false (which I am acutely aware is hack...).
-        let (_rtx_fast_retransmit, rtx_fast_retransmit_changed) =
-            cb.sender.congestion_ctrl.watch_retransmit_now_flag();
-        futures::pin_mut!(rtx_fast_retransmit_changed);
-
         let rtx_future = match rtx_deadline {
             Some(t) => Either::Left(cb.rt.wait_until(t).fuse()),
             None => Either::Right(future::pending()),
         };
         futures::pin_mut!(rtx_future);
+
+        // Pin future for fast retransmission.
+        let (rtx_fast_retransmit, rtx_fast_retransmit_changed) =
+            cb.sender.congestion_ctrl.watch_retransmit_now_flag();
+        futures::pin_mut!(rtx_fast_retransmit_changed);
+        let rtx_fast_future = match rtx_fast_retransmit {
+            true => Either::Left(future::ready(true)),
+            false => Either::Right(future::pending()),
+        };
+        futures::pin_mut!(rtx_fast_future);
+
         futures::select_biased! {
+            _ = rtx_fast_retransmit_changed => continue,
             _ = rtx_deadline_changed => continue,
             _ = rtx_future => {
                 cb.sender.congestion_ctrl.on_rto(&cb.sender);
