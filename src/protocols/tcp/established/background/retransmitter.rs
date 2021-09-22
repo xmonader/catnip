@@ -18,13 +18,8 @@ pub async fn retransmit<RT: Runtime>(
     cause: RetransmitCause,
     cb: &Rc<ControlBlock<RT>>,
     ) -> Result<(), Fail> {
-    // Our retransmission timer fired, so we need to resend a packet.
-    let remote_link_addr = cb.arp.query(cb.remote.address()).await?;
 
     let mut unacked_queue = cb.sender.unacked_queue.borrow_mut();
-    let mut rto = cb.sender.rto.borrow_mut();
-
-    let seq_no = cb.sender.base_seq_no.get();
     let segment = match unacked_queue.front_mut() {
         Some(s) => s,
         None => {
@@ -36,14 +31,19 @@ pub async fn retransmit<RT: Runtime>(
     // TODO: Repacketization
 
     // NOTE: Congestion Control Don't think we record a failure on Fast Retransmit, but can't find a definitive source.
+    let mut rto = cb.sender.rto.borrow_mut();
     match cause {
         RetransmitCause::TimeOut => rto.record_failure(),
         RetransmitCause::FastRetransmit => (),
     };
 
+    // Our retransmission timer fired, so we need to resend a packet.
+    let remote_link_addr = cb.arp.query(cb.remote.address()).await?;
+
     // Unset the initial timestamp so we don't use this for RTT estimation.
     segment.initial_tx.take();
 
+    let seq_no = cb.sender.base_seq_no.get();
     let mut header = cb.tcp_header();
     header.seq_num = seq_no;
     cb.emit(header, segment.bytes.clone(), remote_link_addr);
@@ -67,24 +67,20 @@ pub async fn retransmitter<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, F
         // Pin future for fast retransmission.
         let (rtx_fast_retransmit, rtx_fast_retransmit_changed) =
             cb.sender.congestion_ctrl.watch_retransmit_now_flag();
+        if rtx_fast_retransmit {
+            cb.sender.congestion_ctrl.on_fast_retransmit(&cb.sender);
+            retransmit(RetransmitCause::FastRetransmit, &cb).await?;
+            continue;
+        }
         futures::pin_mut!(rtx_fast_retransmit_changed);
-        let rtx_fast_future = match rtx_fast_retransmit {
-            true => Either::Left(future::ready(true)),
-            false => Either::Right(future::pending()),
-        };
-        futures::pin_mut!(rtx_fast_future);
 
         futures::select_biased! {
-            _ = rtx_fast_retransmit_changed => continue,
             _ = rtx_deadline_changed => continue,
+            _ = rtx_fast_retransmit_changed => continue,
             _ = rtx_future => {
                 cb.sender.congestion_ctrl.on_rto(&cb.sender);
                 retransmit(RetransmitCause::TimeOut, &cb).await?;
             },
-            _ = rtx_fast_retransmit_changed => {
-                cb.sender.congestion_ctrl.on_fast_retransmit(&cb.sender);
-                retransmit(RetransmitCause::FastRetransmit, &cb).await?;
-            }
         }
     }
 }
