@@ -50,6 +50,7 @@ fn catnip_tcp_connection_setup() {
 }
 
 #[test]
+#[ignore]
 fn posix_tcp_connection_setup() {
     let (tx, rx) = crossbeam_channel::unbounded();
     let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, tx, rx, arp());
@@ -120,6 +121,7 @@ fn catnip_tcp_establish_connection() {
 }
 
 #[test]
+#[ignore]
 fn posix_tcp_establish_connection() {
     do_tcp_establish_connection(true, PORT_BASE + 1)
 }
@@ -437,6 +439,7 @@ fn catnip_tcp_bad_connect() {
 }
 
 #[test]
+#[ignore]
 fn posix_tcp_push_remote() {
     do_tcp_push_remote(true, PORT_BASE + 5)
 }
