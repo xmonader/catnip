@@ -98,9 +98,9 @@ impl<RT: Runtime> Receiver<RT> {
         // It is okay if ack_seq_no is greater than the seq number. This can happen when we have
         // ACKed a FIN so our ACK number is +1 greater than our seq number.
         if ack_seq_no == recv_seq_no {
-            Some(recv_seq_no)
-        } else {
             None
+        } else {
+            Some(recv_seq_no)
         }
     }
 
