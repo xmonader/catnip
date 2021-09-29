@@ -30,10 +30,9 @@ jobs:
         envs: GITHUB_REPOSITORY,GITHUB_SHA
         script: |
           cd $GITHUB_REPOSITORY
-          git fetch
-          git reset --hard HEAD
-          git merge '@{u}'
+          git fetch origin
           git checkout --detach $GITHUB_SHA
+          git merge master
     # Build
     - name: Build
       uses: appleboy/ssh-action@master
