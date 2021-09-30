@@ -5,6 +5,7 @@ use crate::interop::{dmtr_sgarray_t, dmtr_sgaseg_t};
 use crate::{
     collections::bytes::{Bytes, BytesMut},
     engine::Engine,
+    logging,
     protocols::{arp, ethernet2::MacAddress, tcp, udp},
     runtime::{PacketBuf, Runtime, RECEIVE_BATCH_SIZE},
     scheduler::{Operation, Scheduler, SchedulerHandle},
@@ -54,6 +55,7 @@ impl TestRuntime {
         link_addr: MacAddress,
         ipv4_addr: Ipv4Addr,
     ) -> Self {
+        logging::initialize();
         let arp_options = arp::Options::new(
             Duration::from_secs(600),
             Duration::from_secs(1),
