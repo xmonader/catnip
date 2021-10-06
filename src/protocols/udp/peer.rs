@@ -92,6 +92,8 @@ impl<RT: Runtime> UdpPeerInner<RT> {
         // First, try to send the packet immediately. If we can't defer the
         // operation to the async path.
         if let Some(link_addr) = self.arp.try_query(remote.addr) {
+            let udp_header = UdpHeader::new(local.map(|l| l.port), remote.port);
+            debug!("UDP send {:?}", udp_header);
             let datagram = UdpDatagram::new(
                 Ethernet2Header {
                     dst_addr: link_addr,
@@ -99,7 +101,7 @@ impl<RT: Runtime> UdpPeerInner<RT> {
                     ether_type: EtherType2::Ipv4,
                 },
                 Ipv4Header::new(self.rt.local_ipv4_addr(), remote.addr, Ipv4Protocol2::Udp),
-                UdpHeader::new(local.map(|l| l.port), remote.port),
+                udp_header,
                 buf,
                 self.rt.udp_options().tx_checksum(),
             );
@@ -239,6 +241,7 @@ impl<RT: Runtime> UdpPeer<RT> {
     pub fn receive(&self, ipv4_header: &Ipv4Header, buf: RT::Buf) -> Result<(), Fail> {
         let mut inner = self.inner.borrow_mut();
         let (hdr, data) = UdpHeader::parse(ipv4_header, buf, inner.rt.udp_options().rx_checksum())?;
+        debug!("UDP received {:?}", hdr);
         let local = ipv4::Endpoint::new(ipv4_header.dst_addr, hdr.dest_port());
         let remote = hdr
             .src_port()
