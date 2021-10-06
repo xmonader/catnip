@@ -33,10 +33,6 @@ impl Socket {
     pub fn set_local(&mut self, local: Option<ipv4::Endpoint>) {
         self.local = local;
     }
-
-    pub fn set_remote(&mut self, remote: Option<ipv4::Endpoint>) {
-        self.remote = remote;
-    }
 }
 
 //==============================================================================

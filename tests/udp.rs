@@ -35,13 +35,10 @@ fn udp_connect_remote() {
 
     let port = ip::Port::try_from(PORT_BASE).unwrap();
     let local = ipv4::Endpoint::new(ALICE_IPV4, port);
-    let remote = ipv4::Endpoint::new(BOB_IPV4, port);
 
     // Open and close a connection.
     let sockfd = libos.socket(libc::AF_INET, libc::SOCK_DGRAM, 0).unwrap();
     libos.bind(sockfd, local).unwrap();
-    let qt = libos.connect(sockfd, remote).unwrap();
-    assert_eq!(libos.wait(qt).qr_opcode, dmtr_opcode_t::DMTR_OPC_CONNECT);
     libos.close(sockfd).unwrap();
 }
 
@@ -53,13 +50,10 @@ fn udp_connect_loopback() {
 
     let port = ip::Port::try_from(PORT_BASE).unwrap();
     let local = ipv4::Endpoint::new(ALICE_IPV4, port);
-    let remote = ipv4::Endpoint::new(ALICE_IPV4, port);
 
     // Open and close a connection.
     let sockfd = libos.socket(libc::AF_INET, libc::SOCK_DGRAM, 0).unwrap();
     libos.bind(sockfd, local).unwrap();
-    let qt = libos.connect(sockfd, remote).unwrap();
-    assert_eq!(libos.wait(qt).qr_opcode, dmtr_opcode_t::DMTR_OPC_CONNECT);
     libos.close(sockfd).unwrap();
 }
 
@@ -74,24 +68,23 @@ fn udp_push_remote() {
     let (alice_tx, alice_rx) = crossbeam_channel::unbounded();
     let (bob_tx, bob_rx) = crossbeam_channel::unbounded();
 
+    let bob_port = ip::Port::try_from(PORT_BASE).unwrap();
+    let bob_addr = ipv4::Endpoint::new(BOB_IPV4, bob_port);
+    let alice_port = ip::Port::try_from(PORT_BASE).unwrap();
+    let alice_addr = ipv4::Endpoint::new(ALICE_IPV4, alice_port);
+
     let alice = thread::spawn(move || {
         let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, alice_tx, bob_rx, arp());
 
-        let port = ip::Port::try_from(PORT_BASE).unwrap();
-        let local = ipv4::Endpoint::new(ALICE_IPV4, port);
-        let remote = ipv4::Endpoint::new(BOB_IPV4, port);
-
         // Open connection.
         let sockfd = libos.socket(libc::AF_INET, libc::SOCK_DGRAM, 0).unwrap();
-        libos.bind(sockfd, local).unwrap();
-        let qt = libos.connect(sockfd, remote).unwrap();
-        assert_eq!(libos.wait(qt).qr_opcode, dmtr_opcode_t::DMTR_OPC_CONNECT);
+        libos.bind(sockfd, alice_addr).unwrap();
 
         // Cook some data.
         let body_sga = DummyLibOS::cook_data(&mut libos);
 
         // Push data.
-        let qt = libos.push(sockfd, &body_sga).unwrap();
+        let qt = libos.pushto(sockfd, &body_sga, bob_addr).unwrap();
         assert_eq!(libos.wait(qt).qr_opcode, dmtr_opcode_t::DMTR_OPC_PUSH);
 
         // Pop data.
@@ -113,15 +106,9 @@ fn udp_push_remote() {
     let bob = thread::spawn(move || {
         let mut libos = DummyLibOS::new(BOB_MAC, BOB_IPV4, bob_tx, alice_rx, arp());
 
-        let port = ip::Port::try_from(PORT_BASE).unwrap();
-        let local = ipv4::Endpoint::new(BOB_IPV4, port);
-        let remote = ipv4::Endpoint::new(ALICE_IPV4, port);
-
         // Open connection.
         let sockfd = libos.socket(libc::AF_INET, libc::SOCK_DGRAM, 0).unwrap();
-        libos.bind(sockfd, local).unwrap();
-        let qt = libos.connect(sockfd, remote).unwrap();
-        assert_eq!(libos.wait(qt).qr_opcode, dmtr_opcode_t::DMTR_OPC_CONNECT);
+        libos.bind(sockfd, bob_addr).unwrap();
 
         // Pop data.
         let qt = libos.pop(sockfd).unwrap();
@@ -133,7 +120,7 @@ fn udp_push_remote() {
         DummyLibOS::check_data(sga);
 
         // Push data.
-        let qt = libos.push(sockfd, &sga).unwrap();
+        let qt = libos.pushto(sockfd, &sga, alice_addr).unwrap();
         assert_eq!(libos.wait(qt).qr_opcode, dmtr_opcode_t::DMTR_OPC_PUSH);
 
         libos.rt().free_sgarray(sga);
@@ -152,24 +139,23 @@ fn udp_lookback() {
     let (alice_tx, alice_rx) = crossbeam_channel::unbounded();
     let (bob_tx, bob_rx) = crossbeam_channel::unbounded();
 
+    let bob_port = ip::Port::try_from(PORT_BASE).unwrap();
+    let bob_addr = ipv4::Endpoint::new(ALICE_IPV4, bob_port);
+    let alice_port = ip::Port::try_from(PORT_BASE).unwrap();
+    let alice_addr = ipv4::Endpoint::new(ALICE_IPV4, alice_port);
+
     let alice = thread::spawn(move || {
         let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, alice_tx, bob_rx, arp());
 
-        let port = ip::Port::try_from(PORT_BASE).unwrap();
-        let local = ipv4::Endpoint::new(ALICE_IPV4, port);
-        let remote = ipv4::Endpoint::new(ALICE_IPV4, port);
-
         // Open connection.
         let sockfd = libos.socket(libc::AF_INET, libc::SOCK_DGRAM, 0).unwrap();
-        libos.bind(sockfd, local).unwrap();
-        let qt = libos.connect(sockfd, remote).unwrap();
-        assert_eq!(libos.wait(qt).qr_opcode, dmtr_opcode_t::DMTR_OPC_CONNECT);
+        libos.bind(sockfd, alice_addr).unwrap();
 
         // Cook some data.
         let body_sga = DummyLibOS::cook_data(&mut libos);
 
         // Push data.
-        let qt = libos.push(sockfd, &body_sga).unwrap();
+        let qt = libos.pushto(sockfd, &body_sga, bob_addr).unwrap();
         assert_eq!(libos.wait(qt).qr_opcode, dmtr_opcode_t::DMTR_OPC_PUSH);
 
         // Pop data.
@@ -191,15 +177,9 @@ fn udp_lookback() {
     let bob = thread::spawn(move || {
         let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, bob_tx, alice_rx, arp());
 
-        let port = ip::Port::try_from(PORT_BASE).unwrap();
-        let local = ipv4::Endpoint::new(ALICE_IPV4, port);
-        let remote = ipv4::Endpoint::new(ALICE_IPV4, port);
-
         // Open connection.
         let sockfd = libos.socket(libc::AF_INET, libc::SOCK_DGRAM, 0).unwrap();
-        libos.bind(sockfd, local).unwrap();
-        let qt = libos.connect(sockfd, remote).unwrap();
-        assert_eq!(libos.wait(qt).qr_opcode, dmtr_opcode_t::DMTR_OPC_CONNECT);
+        libos.bind(sockfd, bob_addr).unwrap();
 
         // Pop data.
         let qt = libos.pop(sockfd).unwrap();
@@ -211,7 +191,7 @@ fn udp_lookback() {
         DummyLibOS::check_data(sga);
 
         // Push data.
-        let qt = libos.push(sockfd, &sga).unwrap();
+        let qt = libos.pushto(sockfd, &sga, alice_addr).unwrap();
         assert_eq!(libos.wait(qt).qr_opcode, dmtr_opcode_t::DMTR_OPC_PUSH);
 
         libos.rt().free_sgarray(sga);

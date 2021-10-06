@@ -195,6 +195,15 @@ impl<RT: Runtime> Engine<RT> {
         self.ipv4.udp.push(fd, buf)
     }
 
+    pub fn udp_pushto(
+        &self,
+        fd: FileDescriptor,
+        buf: RT::Buf,
+        to: ipv4::Endpoint,
+    ) -> Result<(), Fail> {
+        self.ipv4.udp.pushto(fd, buf, to)
+    }
+
     pub fn udp_pop(&mut self, fd: FileDescriptor) -> UdpPopFuture<RT> {
         self.ipv4.udp.pop(fd)
     }
@@ -225,6 +234,18 @@ impl<RT: Runtime> Engine<RT> {
                 _ => Err(Fail::BadFileDescriptor {}),
             }
         }
+    }
+
+    pub fn udp_socket(&mut self) -> Result<FileDescriptor, Fail> {
+        self.ipv4.udp.socket()
+    }
+
+    pub fn udp_bind(
+        &mut self,
+        socket_fd: FileDescriptor,
+        endpoint: ipv4::Endpoint,
+    ) -> Result<(), Fail> {
+        self.ipv4.udp.bind(socket_fd, endpoint)
     }
 
     pub fn tcp_socket(&mut self) -> FileDescriptor {
