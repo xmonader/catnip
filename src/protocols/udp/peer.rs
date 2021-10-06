@@ -206,20 +206,15 @@ impl<RT: Runtime> UdpPeer<RT> {
         Ok(())
     }
 
-    // Connects to a socket.
-    pub fn connect(&self, fd: FileDescriptor, addr: ipv4::Endpoint) -> Result<(), Fail> {
-        let mut inner = self.inner.borrow_mut();
-
-        // Update file descriptor with remote endpoint.
-        match inner.sockets.get_mut(&fd) {
-            Some(s) if s.remote().is_none() => {
-                s.set_remote(Some(addr));
-                Ok(())
-            }
-            _ => Err(Fail::Malformed {
-                details: "Invalid file descriptor on connect",
-            }),
-        }
+    ///
+    /// Dummy accept operation.
+    ///
+    /// - TODO: we should drop this function because it is meaningless for UDP.
+    ///
+    pub fn connect(&self, _fd: FileDescriptor, _addr: ipv4::Endpoint) -> Result<(), Fail> {
+        Err(Fail::Malformed {
+            details: "Operation not supported",
+        })
     }
 
     /// Closes a socket.
