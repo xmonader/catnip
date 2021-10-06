@@ -1,211 +1,455 @@
 // // Copyright (c) Microsoft Corporation.
 // // Licensed under the MIT license.
 
-// use super::datagram::UdpDatagramDecoder;
-// use crate::runtime::Runtime;
-// use crate::{
-//     protocols::{
-//         icmpv4,
-//         ip,
-//     },
-//     test_helpers,
-// };
-// use futures::{
-//     task::{
-//         noop_waker_ref,
-//         Context,
-//     },
-//     FutureExt,
-// };
-// use must_let::must_let;
-// use std::{
-//     convert::TryFrom,
-//     future::Future,
-//     task::Poll,
-//     time::{
-//         Duration,
-//         Instant,
-//     },
-// };
+use crate::{
+    collections::bytes::BytesMut,
+    fail::Fail,
+    file_table::FileDescriptor,
+    protocols::{ip, ipv4},
+    test_helpers,
+};
+use futures::task::{noop_waker_ref, Context};
+use must_let::must_let;
+use std::{
+    convert::TryFrom,
+    future::Future,
+    pin::Pin,
+    task::Poll,
+    time::{Duration, Instant},
+};
 
-// #[test]
-// #[ignore]
-// fn unicast() {
-//     // ensures that a UDP cast succeeds.
+//==============================================================================
+// Bind & Close
+//==============================================================================
 
-//     let alice_port = ip::Port::try_from(54321).unwrap();
-//     let bob_port = ip::Port::try_from(12345).unwrap();
+#[test]
+fn udp_bind_close() {
+    let mut now = Instant::now();
 
-//     let now = Instant::now();
-//     let text = vec![0xffu8; 10];
-//     let alice = test_helpers::new_alice(now);
-//     let mut bob = test_helpers::new_bob(now);
-//     bob.open_udp_port(bob_port);
+    // Setup Alice.
+    let mut alice = test_helpers::new_alice2(now);
+    let alice_port = ip::Port::try_from(80).unwrap();
+    let alice_addr = ipv4::Endpoint::new(test_helpers::ALICE_IPV4, alice_port);
+    let alice_fd: FileDescriptor = alice.udp_socket().unwrap();
+    alice.udp_bind(alice_fd, alice_addr).unwrap();
 
-//     let mut ctx = Context::from_waker(noop_waker_ref());
-//     let mut fut = alice
-//         .udp_cast(test_helpers::BOB_IPV4, bob_port, alice_port, text.clone())
-//         .boxed_local();
-//     let now = now + Duration::from_micros(1);
-//     must_let!(let Poll::Ready(..) = Future::poll(fut.as_mut(), &mut ctx));
+    // Setup Bob.
+    let mut bob = test_helpers::new_bob2(now);
+    let bob_port = ip::Port::try_from(80).unwrap();
+    let bob_addr = ipv4::Endpoint::new(test_helpers::BOB_IPV4, bob_port);
+    let bob_fd: FileDescriptor = bob.udp_socket().unwrap();
+    bob.udp_bind(bob_fd, bob_addr).unwrap();
 
-//     let udp_datagram = {
-//         alice.rt().advance_clock(now);
-//         let bytes = alice.rt().pop_frame();
-//         let _ = UdpDatagramDecoder::attach(&bytes).unwrap();
-//         bytes
-//     };
+    now += Duration::from_micros(1);
 
-//     info!("passing UDP datagram to bob...");
-//     bob.receive(&udp_datagram).unwrap();
-//     bob.rt().advance_clock(now);
+    // Close peers.
+    alice.close(alice_fd).unwrap();
+    bob.close(bob_fd).unwrap();
+}
 
-//     todo!();
-//     // let datagram = bob.rt().pop_frame();
-//     // assert_eq!(
-//     //     datagram.src_ipv4_addr.unwrap(),
-//     //     test_helpers::ALICE_IPV4
-//     // );
-//     // assert_eq!(datagram.src_port.unwrap(), alice_port);
-//     // assert_eq!(datagram.dest_port.unwrap(), bob_port);
-//     // assert_eq!(text.as_slice(), &datagram.payload[..text.len()]);
-// }
+//==============================================================================
+// Push & Pop
+//==============================================================================
 
-// #[test]
-// #[ignore]
-// fn destination_port_unreachable() {
-//     // ensures that a UDP cast succeeds.
-//     let alice_port = ip::Port::try_from(54321).unwrap();
-//     let bob_port = ip::Port::try_from(12345).unwrap();
+#[test]
+fn udp_push_pop() {
+    let mut ctx = Context::from_waker(noop_waker_ref());
+    let mut now = Instant::now();
 
-//     let now = Instant::now();
-//     let text = vec![0xffu8; 10];
-//     let mut alice = test_helpers::new_alice(now);
-//     let mut bob = test_helpers::new_bob(now);
+    // Setup Alice.
+    let mut alice = test_helpers::new_alice2(now);
+    let alice_port = ip::Port::try_from(80).unwrap();
+    let alice_addr = ipv4::Endpoint::new(test_helpers::ALICE_IPV4, alice_port);
+    let alice_fd: FileDescriptor = alice.udp_socket().unwrap();
+    alice.udp_bind(alice_fd, alice_addr).unwrap();
 
-//     let mut ctx = Context::from_waker(noop_waker_ref());
-//     let mut fut = alice
-//         .udp_cast(test_helpers::BOB_IPV4, bob_port, alice_port, text.clone())
-//         .boxed_local();
-//     assert!(Future::poll(fut.as_mut(), &mut ctx).is_ready());
+    // Setup Bob.
+    let mut bob = test_helpers::new_bob2(now);
+    let bob_port = ip::Port::try_from(80).unwrap();
+    let bob_addr = ipv4::Endpoint::new(test_helpers::BOB_IPV4, bob_port);
+    let bob_fd: FileDescriptor = bob.udp_socket().unwrap();
+    bob.udp_bind(bob_fd, bob_addr).unwrap();
 
-//     let now = now + Duration::from_micros(1);
-//     bob.rt().advance_clock(now);
+    // Send data to Bob.
+    let buf = BytesMut::from(&vec![0x5a; 32][..]).freeze();
+    alice.udp_pushto(alice_fd, buf.clone(), bob_addr).unwrap();
+    alice.rt().poll_scheduler();
 
-//     let udp_datagram = {
-//         alice.rt().advance_clock(now);
-//         let bytes = alice.rt().pop_frame();
-//         let _ = UdpDatagramDecoder::attach(&bytes).unwrap();
-//         bytes
-//     };
+    now += Duration::from_micros(1);
 
-//     info!("passing UDP datagram to bob...");
-//     bob.receive(&udp_datagram).unwrap();
-//     bob.rt().advance_clock(now);
-//     let icmpv4_datagram = {
-//         let bytes = bob.rt().pop_frame();
-//         let _ = icmpv4::Error::attach(&bytes).unwrap();
-//         bytes
-//     };
+    // Receive data from Alice.
+    bob.receive(alice.rt().pop_frame()).unwrap();
+    let mut pop_future = bob.udp_pop(bob_fd);
+    must_let!(let Poll::Ready(Ok((Some(remote_addr), received_buf))) = Future::poll(Pin::new(&mut pop_future), &mut ctx));
+    assert_eq!(remote_addr, alice_addr);
+    assert_eq!(received_buf, buf);
 
-//     info!("passing ICMPv4 datagram to alice...");
-//     alice.receive(&icmpv4_datagram).unwrap();
-//     alice.rt().advance_clock(now);
+    // Close peers.
+    alice.close(alice_fd).unwrap();
+    bob.close(bob_fd).unwrap();
+}
 
-//     todo!();
-//     // must_let!(let Icmpv4Error { ref id, ref next_hop_mtu, .. } = &*event);
-//     // assert_eq!(
-//     //     id,
-//     //     &icmpv4::ErrorId::DestinationUnreachable(
-//     //         icmpv4::DestinationUnreachable::DestinationPortUnreachable
-//     //     )
-//     // );
-//     // assert_eq!(next_hop_mtu, &0u16);
-//     // todo: validate `context`
-// }
+//==============================================================================
+// Ping Pong
+//==============================================================================
 
-// #[test]
-// fn udp_loop() {
-//     let mut ctx = Context::from_waker(noop_waker_ref());
-//     let now = Instant::now();
-//     let mut alice = test_helpers::new_alice(now);
-//     let mut bob = test_helpers::new_bob(now);
+#[test]
+fn udp_ping_pong() {
+    let mut ctx = Context::from_waker(noop_waker_ref());
+    let mut now = Instant::now();
 
-//     let port = ip::Port::try_from(80).unwrap();
-//     let alice_addr = ipv4::Endpoint::new(test_helpers::ALICE_IPV4, port);
-//     let bob_addr = ipv4::Endpoint::new(test_helpers::BOB_IPV4, port);
+    // Setup Alice.
+    let mut alice = test_helpers::new_alice2(now);
+    let alice_port = ip::Port::try_from(80).unwrap();
+    let alice_addr = ipv4::Endpoint::new(test_helpers::ALICE_IPV4, alice_port);
+    let alice_fd: FileDescriptor = alice.udp_socket().unwrap();
+    alice.udp_bind(alice_fd, alice_addr).unwrap();
 
-//     let alice_fd = alice.socket(Protocol::Udp);
-//     let _ = alice.bind(alice_fd, alice_addr);
-//     let _ = alice.connect(alice_fd, bob_addr);
+    // Setup Bob.
+    let mut bob = test_helpers::new_bob2(now);
+    let bob_port = ip::Port::try_from(80).unwrap();
+    let bob_addr = ipv4::Endpoint::new(test_helpers::BOB_IPV4, bob_port);
+    let bob_fd: FileDescriptor = bob.udp_socket().unwrap();
+    bob.udp_bind(bob_fd, bob_addr).unwrap();
 
-//     let bob_fd = bob.socket(Protocol::Udp);
-//     let _ = bob.bind(bob_fd, bob_addr);
-//     let _ = bob.connect(bob_fd, alice_addr);
+    // Send data to Bob.
+    let buf_a = BytesMut::from(&vec![0x5a; 32][..]).freeze();
+    alice.udp_pushto(alice_fd, buf_a.clone(), bob_addr).unwrap();
+    alice.rt().poll_scheduler();
 
-//     let size = 32;
-//     let buf = BytesMut::from(&vec![0u8; size][..]).freeze();
+    now += Duration::from_micros(1);
 
-//     let num_rounds: usize = env::var("SEND_RECV_ITERS")
-//         .map(|s| s.parse().unwrap())
-//         .unwrap_or(1);
+    // Receive data from Alice.
+    bob.receive(alice.rt().pop_frame()).unwrap();
+    let mut pop_future = bob.udp_pop(bob_fd);
+    must_let!(let Poll::Ready(Ok((Some(remote_addr), received_buf_a))) = Future::poll(Pin::new(&mut pop_future), &mut ctx));
+    assert_eq!(remote_addr, alice_addr);
+    assert_eq!(received_buf_a, buf_a);
 
-//     let mut samples = Vec::with_capacity(num_rounds);
+    now += Duration::from_micros(1);
 
-//     for _ in 0..num_rounds {
-//         let start = Instant::now();
+    // Send data to Alice.
+    let buf_b = BytesMut::from(&vec![0x5a; 32][..]).freeze();
+    bob.udp_pushto(bob_fd, buf_b.clone(), alice_addr).unwrap();
+    bob.rt().poll_scheduler();
 
-//         alice.udp_push(alice_fd, buf.clone()).unwrap();
-//         alice.rt().poll_scheduler();
-//         bob.receive(alice.rt().pop_frame()).unwrap();
+    now += Duration::from_micros(1);
 
-//         let mut pop_future = bob.udp_pop(bob_fd);
-//         must_let!(let Poll::Ready(Ok((_, recv_buf))) = Future::poll(Pin::new(&mut pop_future), &mut ctx));
-//         assert_eq!(recv_buf.len(), buf.len());
+    // Receive data from Bob.
+    alice.receive(bob.rt().pop_frame()).unwrap();
+    let mut pop_future = alice.udp_pop(alice_fd);
+    must_let!(let Poll::Ready(Ok((Some(remote_addr), received_buf_b))) = Future::poll(Pin::new(&mut pop_future), &mut ctx));
+    assert_eq!(remote_addr, bob_addr);
+    assert_eq!(received_buf_b, buf_b);
 
-//         bob.udp_push(bob_fd, recv_buf).unwrap();
-//         bob.rt().poll_scheduler();
-//         alice.receive(bob.rt().pop_frame()).unwrap();
+    // Close peers.
+    alice.close(alice_fd).unwrap();
+    bob.close(bob_fd).unwrap();
+}
 
-//         let mut pop_future = alice.udp_pop(alice_fd);
-//         must_let!(let Poll::Ready(Ok((_, recv_buf))) = Future::poll(Pin::new(&mut pop_future), &mut ctx));
-//         assert_eq!(recv_buf.len(), buf.len());
+//==============================================================================
+// Loop Bind & Close
+//==============================================================================
 
-//         samples.push(start.elapsed());
-//     }
+#[test]
+fn udp_loop1_bind_close() {
+    // Loop.
+    for _ in 0..1000 {
+        udp_bind_close();
+    }
+}
 
-//     let mut h = histogram::Histogram::new();
-//     for s in samples {
-//         h.increment(s.as_nanos() as u64).unwrap();
-//     }
-//     println!("Min:   {:?}", Duration::from_nanos(h.minimum().unwrap()));
-//     println!(
-//         "p25:   {:?}",
-//         Duration::from_nanos(h.percentile(0.25).unwrap())
-//     );
-//     println!(
-//         "p50:   {:?}",
-//         Duration::from_nanos(h.percentile(0.50).unwrap())
-//     );
-//     println!(
-//         "p75:   {:?}",
-//         Duration::from_nanos(h.percentile(0.75).unwrap())
-//     );
-//     println!(
-//         "p90:   {:?}",
-//         Duration::from_nanos(h.percentile(0.90).unwrap())
-//     );
-//     println!(
-//         "p95:   {:?}",
-//         Duration::from_nanos(h.percentile(0.95).unwrap())
-//     );
-//     println!(
-//         "p99:   {:?}",
-//         Duration::from_nanos(h.percentile(0.99).unwrap())
-//     );
-//     println!(
-//         "p99.9: {:?}",
-//         Duration::from_nanos(h.percentile(0.999).unwrap())
-//     );
-//     println!("Max:   {:?}", Duration::from_nanos(h.maximum().unwrap()));
-// }
+#[test]
+fn udp_loop2_bind_close() {
+    let mut now = Instant::now();
+
+    // Alice.
+    let mut alice = test_helpers::new_alice2(now);
+    let alice_port = ip::Port::try_from(80).unwrap();
+    let alice_addr = ipv4::Endpoint::new(test_helpers::ALICE_IPV4, alice_port);
+
+    // Bob.
+    let mut bob = test_helpers::new_bob2(now);
+    let bob_port = ip::Port::try_from(80).unwrap();
+    let bob_addr = ipv4::Endpoint::new(test_helpers::BOB_IPV4, bob_port);
+
+    // Loop.
+    for _ in 0..1000 {
+        // Bind Alice.
+        let alice_fd: FileDescriptor = alice.udp_socket().unwrap();
+        alice.udp_bind(alice_fd, alice_addr).unwrap();
+
+        // Bind bob.
+        let bob_fd: FileDescriptor = bob.udp_socket().unwrap();
+        bob.udp_bind(bob_fd, bob_addr).unwrap();
+
+        now += Duration::from_micros(1);
+
+        // Close peers.
+        alice.close(alice_fd).unwrap();
+        bob.close(bob_fd).unwrap();
+    }
+}
+
+//==============================================================================
+// Loop Push & Pop
+//==============================================================================
+
+#[test]
+fn udp_loop1_push_pop() {
+    // Loop.
+    for _ in 0..1000 {
+        udp_push_pop();
+    }
+}
+
+#[test]
+fn udp_loop2_push_pop() {
+    let mut ctx = Context::from_waker(noop_waker_ref());
+    let mut now = Instant::now();
+
+    // Setup Alice.
+    let mut alice = test_helpers::new_alice2(now);
+    let alice_port = ip::Port::try_from(80).unwrap();
+    let alice_addr = ipv4::Endpoint::new(test_helpers::ALICE_IPV4, alice_port);
+    let alice_fd: FileDescriptor = alice.udp_socket().unwrap();
+    alice.udp_bind(alice_fd, alice_addr).unwrap();
+
+    // Setup Bob.
+    let mut bob = test_helpers::new_bob2(now);
+    let bob_port = ip::Port::try_from(80).unwrap();
+    let bob_addr = ipv4::Endpoint::new(test_helpers::BOB_IPV4, bob_port);
+    let bob_fd: FileDescriptor = bob.udp_socket().unwrap();
+    bob.udp_bind(bob_fd, bob_addr).unwrap();
+    // Loop.
+    for b in 0..1000 {
+        // Send data to Bob.
+        let buf = BytesMut::from(&vec![(b % 256) as u8; 32][..]).freeze();
+        alice.udp_pushto(alice_fd, buf.clone(), bob_addr).unwrap();
+        alice.rt().poll_scheduler();
+
+        now += Duration::from_micros(1);
+
+        // Receive data from Alice.
+        bob.receive(alice.rt().pop_frame()).unwrap();
+        let mut pop_future = bob.udp_pop(bob_fd);
+        must_let!(let Poll::Ready(Ok((Some(remote_addr), received_buf))) = Future::poll(Pin::new(&mut pop_future), &mut ctx));
+        assert_eq!(remote_addr, alice_addr);
+        assert_eq!(received_buf, buf);
+    }
+
+    // Close peers.
+    alice.close(alice_fd).unwrap();
+    bob.close(bob_fd).unwrap();
+}
+
+//==============================================================================
+// Loop Ping Pong
+//==============================================================================
+
+#[test]
+fn udp_loop1_ping_pong() {
+    // Loop.
+    for _ in 0..1000 {
+        udp_ping_pong();
+    }
+}
+
+#[test]
+fn udp_loop2_ping_pong() {
+    let mut ctx = Context::from_waker(noop_waker_ref());
+    let mut now = Instant::now();
+
+    // Setup Alice.
+    let mut alice = test_helpers::new_alice2(now);
+    let alice_port = ip::Port::try_from(80).unwrap();
+    let alice_addr = ipv4::Endpoint::new(test_helpers::ALICE_IPV4, alice_port);
+    let alice_fd: FileDescriptor = alice.udp_socket().unwrap();
+    alice.udp_bind(alice_fd, alice_addr).unwrap();
+
+    // Setup Bob.
+    let mut bob = test_helpers::new_bob2(now);
+    let bob_port = ip::Port::try_from(80).unwrap();
+    let bob_addr = ipv4::Endpoint::new(test_helpers::BOB_IPV4, bob_port);
+    let bob_fd: FileDescriptor = bob.udp_socket().unwrap();
+    bob.udp_bind(bob_fd, bob_addr).unwrap();
+    //
+    // Loop.
+    for _ in 0..1000 {
+        // Send data to Bob.
+        let buf_a = BytesMut::from(&vec![0x5a; 32][..]).freeze();
+        alice.udp_pushto(alice_fd, buf_a.clone(), bob_addr).unwrap();
+        alice.rt().poll_scheduler();
+
+        now += Duration::from_micros(1);
+
+        // Receive data from Alice.
+        bob.receive(alice.rt().pop_frame()).unwrap();
+        let mut pop_future = bob.udp_pop(bob_fd);
+        must_let!(let Poll::Ready(Ok((Some(remote_addr), received_buf_a))) = Future::poll(Pin::new(&mut pop_future), &mut ctx));
+        assert_eq!(remote_addr, alice_addr);
+        assert_eq!(received_buf_a, buf_a);
+
+        now += Duration::from_micros(1);
+
+        // Send data to Alice.
+        let buf_b = BytesMut::from(&vec![0x5a; 32][..]).freeze();
+        bob.udp_pushto(bob_fd, buf_b.clone(), alice_addr).unwrap();
+        bob.rt().poll_scheduler();
+
+        now += Duration::from_micros(1);
+
+        // Receive data from Bob.
+        alice.receive(bob.rt().pop_frame()).unwrap();
+        let mut pop_future = alice.udp_pop(alice_fd);
+        must_let!(let Poll::Ready(Ok((Some(remote_addr), received_buf_b))) = Future::poll(Pin::new(&mut pop_future), &mut ctx));
+        assert_eq!(remote_addr, bob_addr);
+        assert_eq!(received_buf_b, buf_b);
+    }
+
+    // Close peers.
+    alice.close(alice_fd).unwrap();
+    bob.close(bob_fd).unwrap();
+}
+
+//==============================================================================
+// Bad Bind
+//==============================================================================
+
+#[test]
+fn udp_bind_address_in_use() {
+    let now = Instant::now();
+
+    // Setup Alice.
+    let mut alice = test_helpers::new_alice2(now);
+    let alice_port = ip::Port::try_from(80).unwrap();
+    let alice_addr = ipv4::Endpoint::new(test_helpers::ALICE_IPV4, alice_port);
+    let alice_fd: FileDescriptor = alice.udp_socket().unwrap();
+    alice.udp_bind(alice_fd, alice_addr).unwrap();
+
+    // Try to bind Alice again.
+    must_let!(let Err(err) = alice.udp_bind(alice_fd, alice_addr));
+    assert_eq!(
+        err,
+        Fail::Malformed {
+            details: "Port already listening",
+        }
+    );
+
+    // Close peers.
+    alice.close(alice_fd).unwrap();
+}
+
+#[test]
+fn udp_bind_bad_file_descriptor() {
+    let now = Instant::now();
+
+    // Setup Alice.
+    let mut alice = test_helpers::new_alice2(now);
+    let alice_port = ip::Port::try_from(80).unwrap();
+    let alice_addr = ipv4::Endpoint::new(test_helpers::ALICE_IPV4, alice_port);
+    let alice_fd: FileDescriptor = u32::MAX;
+
+    // Try to bind Alice.
+    must_let!(let Err(err) = alice.udp_bind(alice_fd, alice_addr));
+    assert_eq!(err, Fail::BadFileDescriptor {});
+}
+
+//==============================================================================
+// Bad Close
+//==============================================================================
+
+#[test]
+fn udp_close_bad_file_descriptor() {
+    let now = Instant::now();
+
+    // Setup Alice.
+    let mut alice = test_helpers::new_alice2(now);
+    let alice_fd: FileDescriptor = alice.udp_socket().unwrap();
+
+    // Try to close bad file descriptor.
+    must_let!(let Err(err) = alice.close(u32::MAX));
+    assert_eq!(err, Fail::BadFileDescriptor {});
+
+    // Try to close Alice two times.
+    alice.close(alice_fd).unwrap();
+    must_let!(let Err(err) = alice.close(alice_fd));
+    assert_eq!(err, Fail::BadFileDescriptor {});
+}
+
+//==============================================================================
+// Bad Pop
+//==============================================================================
+
+#[test]
+fn udp_pop_not_bound() {
+    let mut now = Instant::now();
+
+    // Setup Alice.
+    let mut alice = test_helpers::new_alice2(now);
+    let alice_port = ip::Port::try_from(80).unwrap();
+    let alice_addr = ipv4::Endpoint::new(test_helpers::ALICE_IPV4, alice_port);
+    let alice_fd: FileDescriptor = alice.udp_socket().unwrap();
+    alice.udp_bind(alice_fd, alice_addr).unwrap();
+
+    // Setup Bob.
+    let mut bob = test_helpers::new_bob2(now);
+    let bob_port = ip::Port::try_from(80).unwrap();
+    let bob_addr = ipv4::Endpoint::new(test_helpers::BOB_IPV4, bob_port);
+    let bob_fd: FileDescriptor = bob.udp_socket().unwrap();
+
+    // Send data to Bob.
+    let buf = BytesMut::from(&vec![0x5a; 32][..]).freeze();
+    alice.udp_pushto(alice_fd, buf.clone(), bob_addr).unwrap();
+    alice.rt().poll_scheduler();
+
+    now += Duration::from_micros(1);
+
+    // Receive data from Alice.
+    must_let!(let Err(err) = bob.receive(alice.rt().pop_frame()));
+    assert_eq!(
+        err,
+        Fail::Malformed {
+            details: "Port not bound",
+        }
+    );
+
+    // Close peers.
+    alice.close(alice_fd).unwrap();
+    bob.close(bob_fd).unwrap();
+}
+
+//==============================================================================
+// Bad Push
+//==============================================================================
+
+#[test]
+fn udp_push_bad_file_descriptor() {
+    let mut now = Instant::now();
+
+    // Setup Alice.
+    let mut alice = test_helpers::new_alice2(now);
+    let alice_port = ip::Port::try_from(80).unwrap();
+    let alice_addr = ipv4::Endpoint::new(test_helpers::ALICE_IPV4, alice_port);
+    let alice_fd: FileDescriptor = alice.udp_socket().unwrap();
+    alice.udp_bind(alice_fd, alice_addr).unwrap();
+
+    // Setup Bob.
+    let mut bob = test_helpers::new_bob2(now);
+    let bob_port = ip::Port::try_from(80).unwrap();
+    let bob_addr = ipv4::Endpoint::new(test_helpers::BOB_IPV4, bob_port);
+    let bob_fd: FileDescriptor = bob.udp_socket().unwrap();
+    bob.udp_bind(bob_fd, bob_addr).unwrap();
+
+    // Send data to Bob.
+    let buf = BytesMut::from(&vec![0x5a; 32][..]).freeze();
+    must_let!(let Err(err) = alice.udp_pushto(u32::MAX, buf.clone(), bob_addr));
+    assert_eq!(err, Fail::BadFileDescriptor {});
+
+    alice.rt().poll_scheduler();
+    now += Duration::from_micros(1);
+
+    // Close peers.
+    alice.close(alice_fd).unwrap();
+    bob.close(bob_fd).unwrap();
+}
