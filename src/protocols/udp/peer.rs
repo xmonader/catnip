@@ -186,11 +186,7 @@ impl<RT: Runtime> UdpPeer<RT> {
             Some(s) if s.local().is_none() => {
                 s.set_local(Some(addr));
             }
-            _ => {
-                return Err(Fail::Malformed {
-                    details: "Invalid file descriptor on bind",
-                })
-            }
+            _ => {return Err(Fail::BadFileDescriptor{})}
         }
 
         // Register listener.
@@ -223,11 +219,7 @@ impl<RT: Runtime> UdpPeer<RT> {
 
         let socket = match inner.sockets.remove(&fd) {
             Some(s) => s,
-            None => {
-                return Err(Fail::Malformed {
-                    details: "Invalid file descriptor",
-                })
-            }
+            None => {return Err(Fail::BadFileDescriptor {})}
         };
 
         // Remove endpoint biding.
@@ -286,11 +278,7 @@ impl<RT: Runtime> UdpPeer<RT> {
         let inner = self.inner.borrow();
         let local = match inner.sockets.get(&fd) {
             Some(s) if s.local().is_some() => s.local(),
-            _ => {
-                return Err(Fail::Malformed {
-                    details: "Invalid file descriptor on pushto",
-                })
-            }
+            _ => {return Err(Fail::BadFileDescriptor {})}
         };
         inner.send_datagram(buf, local, to)
     }
