@@ -11,6 +11,7 @@ use crate::{
         ipv4::datagram::{Ipv4Header, Ipv4Protocol2},
     },
     runtime::Runtime,
+    scheduler::SchedulerHandle,
 };
 
 use byteorder::{ByteOrder, NetworkEndian};
@@ -84,6 +85,9 @@ pub struct Icmpv4Peer<RT: Runtime> {
 
     /// Sequence Number
     seq: Wrapping<u16>,
+
+    #[allow(unused)]
+    handle: SchedulerHandle,
 }
 
 impl<RT: Runtime> Icmpv4Peer<RT> {
@@ -91,13 +95,15 @@ impl<RT: Runtime> Icmpv4Peer<RT> {
     pub fn new(rt: RT, arp: arp::Peer<RT>) -> Icmpv4Peer<RT> {
         let (tx, rx) = mpsc::unbounded();
         let requests = ReqQueue::new();
-        rt.spawn(Self::background(rt.clone(), arp.clone(), rx));
+        let future = Self::background(rt.clone(), arp.clone(), rx);
+        let handle = rt.spawn(future);
         Icmpv4Peer {
             rt,
             arp,
             tx,
             requests: Rc::new(RefCell::new(requests)),
             seq: Wrapping(0),
+            handle,
         }
     }
 
