@@ -1,16 +1,20 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use super::datagram::{Ipv4Header, Ipv4Protocol2};
-#[cfg(test)]
-use crate::file_table::FileDescriptor;
 use crate::{
     fail::Fail,
     file_table::FileTable,
-    protocols::{arp, icmpv4, tcp, udp},
+    protocols::{
+        arp, icmpv4,
+        ipv4::datagram::{Ipv4Header, Ipv4Protocol2},
+        tcp, udp,
+    },
     runtime::Runtime,
 };
 use std::{future::Future, net::Ipv4Addr, time::Duration};
+
+#[cfg(test)]
+use crate::file_table::FileDescriptor;
 
 pub struct Ipv4Peer<RT: Runtime> {
     rt: RT,

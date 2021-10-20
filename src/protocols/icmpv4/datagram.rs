@@ -65,18 +65,27 @@ impl Icmpv4Type2 {
 
     fn serialize(&self) -> (u8, [u8; 4]) {
         use Icmpv4Type2::*;
+        let zero = [0u8; 4];
         match self {
-            EchoReply { .. } => (0, [0u8; 4]),
-            DestinationUnreachable => (3, [0u8; 4]),
-            SourceQuench => (4, [0u8; 4]),
-            RedirectMessage => (5, [0u8; 4]),
-            EchoRequest { .. } => (8, [0u8; 4]),
-            RouterAdvertisement => (9, [0u8; 4]),
-            RouterSolicitation => (10, [0u8; 4]),
-            TimeExceeded => (11, [0u8; 4]),
-            BadIpHeader => (12, [0u8; 4]),
-            Timestamp => (13, [0u8; 4]),
-            TimestampReply => (14, [0u8; 4]),
+            EchoReply { id, seq_num } => {
+                let [id1, id2] = id.to_be_bytes();
+                let [seq1, seq2] = seq_num.to_be_bytes();
+                (0, [id1, id2, seq1, seq2])
+            }
+            DestinationUnreachable => (3, zero),
+            SourceQuench => (4, zero),
+            RedirectMessage => (5, zero),
+            EchoRequest { id, seq_num } => {
+                let [id1, id2] = id.to_be_bytes();
+                let [seq1, seq2] = seq_num.to_be_bytes();
+                (8, [id1, id2, seq1, seq2])
+            }
+            RouterAdvertisement => (9, zero),
+            RouterSolicitation => (10, zero),
+            TimeExceeded => (11, zero),
+            BadIpHeader => (12, zero),
+            Timestamp => (13, zero),
+            TimestampReply => (14, zero),
         }
     }
 }

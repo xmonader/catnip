@@ -11,6 +11,7 @@ use crate::{
         ipv4::datagram::{Ipv4Header, Ipv4Protocol2},
     },
     runtime::Runtime,
+    scheduler::SchedulerHandle,
 };
 
 use byteorder::{ByteOrder, NetworkEndian};
@@ -84,6 +85,9 @@ pub struct Icmpv4Peer<RT: Runtime> {
 
     /// Sequence Number
     seq: Wrapping<u16>,
+
+    #[allow(unused)]
+    handle: SchedulerHandle,
 }
 
 impl<RT: Runtime> Icmpv4Peer<RT> {
@@ -91,13 +95,15 @@ impl<RT: Runtime> Icmpv4Peer<RT> {
     pub fn new(rt: RT, arp: arp::Peer<RT>) -> Icmpv4Peer<RT> {
         let (tx, rx) = mpsc::unbounded();
         let requests = ReqQueue::new();
-        rt.spawn(Self::background(rt.clone(), arp.clone(), rx));
+        let future = Self::background(rt.clone(), arp.clone(), rx);
+        let handle = rt.spawn(future);
         Icmpv4Peer {
             rt,
             arp,
             tx,
             requests: Rc::new(RefCell::new(requests)),
             seq: Wrapping(0),
+            handle,
         }
     }
 
@@ -116,11 +122,15 @@ impl<RT: Runtime> Icmpv4Peer<RT> {
                     "ARP query complete ({} -> {})",
                     dst_ipv4_addr, dst_link_addr
                 );
+                debug!(
+                    "reply ping ({}, {}, {})",
+                    dst_ipv4_addr, id, seq_num
+                );
                 // Send reply message.
                 rt.transmit(Icmpv4Message::new(
-                    Ethernet2Header::new(dst_link_addr, rt.local_link_addr(), EtherType2::Ipv4),
-                    Ipv4Header::new(rt.local_ipv4_addr(), dst_ipv4_addr, Ipv4Protocol2::Icmpv4),
-                    Icmpv4Header::new(Icmpv4Type2::EchoReply { id, seq_num }, 0),
+                        Ethernet2Header::new(dst_link_addr, rt.local_link_addr(), EtherType2::Ipv4),
+                        Ipv4Header::new(rt.local_ipv4_addr(), dst_ipv4_addr, Ipv4Protocol2::Icmpv4),
+                        Icmpv4Header::new(Icmpv4Type2::EchoReply { id, seq_num }, 0),
                 ));
             };
             if let Err(e) = r {
@@ -135,12 +145,13 @@ impl<RT: Runtime> Icmpv4Peer<RT> {
     /// Parses and handles a ICMP message.
     pub fn receive(&mut self, ipv4_header: &Ipv4Header, buf: RT::Buf) -> Result<(), Fail> {
         let (icmpv4_hdr, _) = Icmpv4Header::parse(buf)?;
+        debug!("ICMPv4 received {:?}", icmpv4_hdr);
         match icmpv4_hdr.icmpv4_type {
             Icmpv4Type2::EchoRequest { id, seq_num } => {
                 self.tx
                     .unbounded_send((ipv4_header.src_addr, id, seq_num))
                     .unwrap();
-            }
+                }
             Icmpv4Type2::EchoReply { id, seq_num } => {
                 if let Some(tx) = self.requests.borrow_mut().remove(&(id, seq_num)) {
                     let _ = tx.send(());
@@ -158,7 +169,7 @@ impl<RT: Runtime> Icmpv4Peer<RT> {
         let mut state: u32 = 0xFFFF;
         let addr_octets = self.rt.local_ipv4_addr().octets();
         state += NetworkEndian::read_u16(&addr_octets[0..2]) as u32;
-        state += NetworkEndian::read_u16(&addr_octets[3..4]) as u32;
+        state += NetworkEndian::read_u16(&addr_octets[2..4]) as u32;
 
         let mut pid_buf = [0u8; 4];
         NetworkEndian::write_u32(&mut pid_buf[..], process::id());
