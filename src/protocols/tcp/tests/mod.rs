@@ -18,6 +18,7 @@ use std::{
 };
 
 #[test]
+#[ignore]
 fn test_connect() {
     let mut ctx = Context::from_waker(noop_waker_ref());
     let mut now = Instant::now();
