@@ -19,6 +19,9 @@ use libc::c_int;
 use must_let::must_let;
 use std::time::Instant;
 
+#[cfg(feature = "profiler")]
+use perftools::timer;
+
 const TIMER_RESOLUTION: usize = 64;
 const MAX_RECV_ITERS: usize = 2;
 
@@ -74,6 +77,8 @@ impl<RT: Runtime> LibOS<RT> {
         socket_type: c_int,
         _protocol: c_int,
     ) -> Result<FileDescriptor, Fail> {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::socket");
         trace!(
             "socket(): domain={:?} type={:?} protocol={:?}",
             domain,
@@ -103,6 +108,8 @@ impl<RT: Runtime> LibOS<RT> {
     /// returned instead.
     ///
     pub fn bind(&mut self, fd: FileDescriptor, local: Endpoint) -> Result<(), Fail> {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::bind");
         trace!("bind(): fd={:?} local={:?}", fd, local);
         self.engine.bind(fd, local)
     }
@@ -124,6 +131,8 @@ impl<RT: Runtime> LibOS<RT> {
     /// returned instead.
     ///
     pub fn listen(&mut self, fd: FileDescriptor, backlog: usize) -> Result<(), Fail> {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::listen");
         trace!("listen(): fd={:?} backlog={:?}", fd, backlog);
         if backlog == 0 {
             return Err(Fail::Invalid {
@@ -146,6 +155,8 @@ impl<RT: Runtime> LibOS<RT> {
     /// returned instead.
     ///
     pub fn accept(&mut self, fd: FileDescriptor) -> Result<QToken, Fail> {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::accept");
         trace!("accept(): {:?}", fd);
         match self.engine.accept(fd) {
             Ok(future) => Ok(self.rt.scheduler().insert(future).into_raw()),
@@ -166,6 +177,8 @@ impl<RT: Runtime> LibOS<RT> {
     /// returned instead.
     ///
     pub fn connect(&mut self, fd: FileDescriptor, remote: Endpoint) -> Result<QToken, Fail> {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::connect");
         trace!("connect(): fd={:?} remote={:?}", fd, remote);
         let future = self.engine.connect(fd, remote)?;
         Ok(self.rt.scheduler().insert(future).into_raw())
@@ -182,6 +195,8 @@ impl<RT: Runtime> LibOS<RT> {
     /// returned instead.
     ///
     pub fn close(&mut self, fd: FileDescriptor) -> Result<(), Fail> {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::close");
         trace!("close(): fd={:?}", fd);
         self.engine.close(fd)
     }
@@ -190,6 +205,8 @@ impl<RT: Runtime> LibOS<RT> {
     /// IO connection represented by `fd`. This operation returns immediately with a `QToken`.
     /// The data has been written when [`wait`ing](Self::wait) on the QToken returns.
     pub fn push(&mut self, fd: FileDescriptor, sga: &dmtr_sgarray_t) -> Result<QToken, Fail> {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::push");
         trace!("push(): fd={:?}", fd);
         let buf = self.rt.clone_sgarray(sga);
         let future = self.engine.push(fd, buf)?;
@@ -199,6 +216,8 @@ impl<RT: Runtime> LibOS<RT> {
     /// Similar to [push](Self::push) but uses a [Runtime]-specific buffer instead of the
     /// [dmtr_sgarray_t].
     pub fn push2(&mut self, fd: FileDescriptor, buf: RT::Buf) -> Result<QToken, Fail> {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::push2");
         trace!("push2(): fd={:?}", fd);
         let future = self.engine.push(fd, buf)?;
         Ok(self.rt.scheduler().insert(future).into_raw())
@@ -210,6 +229,8 @@ impl<RT: Runtime> LibOS<RT> {
         sga: &dmtr_sgarray_t,
         to: Endpoint,
     ) -> Result<QToken, Fail> {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::pushto");
         let buf = self.rt.clone_sgarray(sga);
         let future = self.engine.pushto(fd, buf, to)?;
         Ok(self.rt.scheduler().insert(future).into_raw())
@@ -221,6 +242,8 @@ impl<RT: Runtime> LibOS<RT> {
         buf: RT::Buf,
         to: Endpoint,
     ) -> Result<QToken, Fail> {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::pushto2");
         let future = self.engine.pushto(fd, buf, to)?;
         Ok(self.rt.scheduler().insert(future).into_raw())
     }
@@ -232,19 +255,28 @@ impl<RT: Runtime> LibOS<RT> {
     /// operations will fail.
     ///
     pub fn drop_qtoken(&mut self, qt: QToken) {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::drop_qtoken");
         drop(self.rt.scheduler().from_raw_handle(qt).unwrap());
     }
 
     /// Create a pop request to write data from IO connection represented by `fd` into a buffer
     /// allocated by the application.
     pub fn pop(&mut self, fd: FileDescriptor) -> Result<QToken, Fail> {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::pop");
+
         trace!("pop(): fd={:?}", fd);
+
         let future = self.engine.pop(fd)?;
+
         Ok(self.rt.scheduler().insert(future).into_raw())
     }
 
     // If this returns a result, `qt` is no longer valid.
     pub fn poll(&mut self, qt: QToken) -> Option<dmtr_qresult_t> {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::poll");
         trace!("poll(): qt={:?}", qt);
         self.poll_bg_work();
         let handle = match self.rt.scheduler().from_raw_handle(qt) {
@@ -263,6 +295,8 @@ impl<RT: Runtime> LibOS<RT> {
 
     /// Block until request represented by `qt` is finished returning the results of this request.
     pub fn wait(&mut self, qt: QToken) -> dmtr_qresult_t {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::wait");
         trace!("wait(): qt={:?}", qt);
         let (qd, result) = self.wait2(qt);
         dmtr_qresult_t::pack(&self.rt, result, qd, qt)
@@ -271,6 +305,8 @@ impl<RT: Runtime> LibOS<RT> {
     /// Block until request represented by `qt` is finished returning the file descriptor
     /// representing this request and the results of that operation.
     pub fn wait2(&mut self, qt: QToken) -> (FileDescriptor, OperationResult<RT>) {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::wait2");
         trace!("wait2(): qt={:?}", qt);
         let handle = self.rt.scheduler().from_raw_handle(qt).unwrap();
 
@@ -285,6 +321,8 @@ impl<RT: Runtime> LibOS<RT> {
     }
 
     pub fn wait_all_pushes(&mut self, qts: &mut Vec<QToken>) {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::wait_all_pushes");
         trace!("wait_all_pushes(): qts={:?}", qts);
         self.poll_bg_work();
         for qt in qts.drain(..) {
@@ -299,6 +337,8 @@ impl<RT: Runtime> LibOS<RT> {
     /// Given a list of queue tokens, run all ready tasks and return the first task which has
     /// finished.
     pub fn wait_any(&mut self, qts: &[QToken]) -> (usize, dmtr_qresult_t) {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::wait_any");
         trace!("wait_any(): qts={:?}", qts);
         loop {
             self.poll_bg_work();
@@ -314,6 +354,8 @@ impl<RT: Runtime> LibOS<RT> {
     }
 
     pub fn wait_any2(&mut self, qts: &[QToken]) -> (usize, FileDescriptor, OperationResult<RT>) {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::wait_any2");
         trace!("wait_any2(): qts={:?}", qts);
         loop {
             self.poll_bg_work();
