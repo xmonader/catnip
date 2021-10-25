@@ -1,13 +1,21 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
+
 name: Build
 
-on: [push]
+on:
+  push:
+    branches-ignore:
+      - dev
+      - unstable
+      - master
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   build:
-    name: Build
+    name: Docker
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
