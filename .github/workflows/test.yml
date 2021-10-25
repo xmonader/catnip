@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
+
 name: Test
 
 on:
@@ -13,51 +16,49 @@ on:
       - dev
 
 env:
+  CARGO_TERM_COLOR: always
   GITHUB_REPOSITORY: $GITHUB_REPOSITORY
   GITHUB_SHA: $GITHUB_SHA
 
 jobs:
 
   build:
-    name: Build
+    name: Demikernel0
     runs-on: ubuntu-latest
     steps:
-    # Fetch Changes
     - name: Fetch Changes
       uses: appleboy/ssh-action@master
       with:
-        host: ${{ secrets.HOSTNAME }}
+        host: ${{ secrets.HOSTNAME_A }}
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.SSHKEY }}
-        port: ${{ secrets.PORTNUM }}
+        port: ${{ secrets.PORTNUM_A }}
         envs: GITHUB_REPOSITORY,GITHUB_SHA
         script: |
           cd $GITHUB_REPOSITORY
           git fetch origin
           git checkout --detach $GITHUB_SHA
-          git merge master
     # Build
     - name: Build
       uses: appleboy/ssh-action@master
       with:
-        host: ${{ secrets.HOSTNAME }}
+        host: ${{ secrets.HOSTNAME_A }}
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.SSHKEY }}
-        port: ${{ secrets.PORTNUM }}
+        port: ${{ secrets.PORTNUM_A }}
         envs: GITHUB_REPOSITORY,GITHUB_SHA
         script: |
           source $HOME/.cargo/env
           cd $GITHUB_REPOSITORY
-          cargo clean
-          cargo build
+          make all
     # Test
     - name: Test
       uses: appleboy/ssh-action@master
       with:
-        host: ${{ secrets.HOSTNAME }}
+        host: ${{ secrets.HOSTNAME_A }}
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.SSHKEY }}
-        port: ${{ secrets.PORTNUM }}
+        port: ${{ secrets.PORTNUM_A }}
         envs: GITHUB_REPOSITORY,GITHUB_SHA
         script: |
           source $HOME/.cargo/env
@@ -67,12 +68,13 @@ jobs:
     - name: Post Run
       uses: appleboy/ssh-action@master
       with:
-        host: ${{ secrets.HOSTNAME }}
+        host: ${{ secrets.HOSTNAME_A }}
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.SSHKEY }}
-        port: ${{ secrets.PORTNUM }}
+        port: ${{ secrets.PORTNUM_A }}
         envs: GITHUB_REPOSITORY,GITHUB_SHA
         script: |
           cd $GITHUB_REPOSITORY
+          make clean
           git checkout master
           git remote prune origin
