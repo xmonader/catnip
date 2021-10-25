@@ -20,10 +20,11 @@ use crate::{
     runtime::Runtime,
     scheduler::SchedulerHandle,
 };
-
 use futures::{channel::mpsc, stream::StreamExt};
-
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
+
+#[cfg(feature="profiler")]
+use perftools::timer;
 
 //==============================================================================
 // Constants & Structures
@@ -162,6 +163,9 @@ impl<RT: Runtime> UdpPeer<RT> {
 
     /// Opens a UDP socket.
     pub fn socket(&self) -> Result<FileDescriptor, Fail> {
+        #[cfg(feature="profiler")]
+        timer!("udp::socket");
+
         let mut inner = self.inner.borrow_mut();
         let fd = inner.file_table.alloc(File::UdpSocket);
         let socket = Socket::default();
@@ -175,6 +179,9 @@ impl<RT: Runtime> UdpPeer<RT> {
 
     /// Binds a socket to an endpoint address.
     pub fn bind(&self, fd: FileDescriptor, addr: ipv4::Endpoint) -> Result<(), Fail> {
+        #[cfg(feature="profiler")]
+        timer!("udp::bind");
+
         let mut inner = self.inner.borrow_mut();
         // Endpoint in use.
         if inner.bound.contains_key(&addr) {
@@ -217,6 +224,9 @@ impl<RT: Runtime> UdpPeer<RT> {
 
     /// Closes a socket.
     pub fn close(&self, fd: FileDescriptor) -> Result<(), Fail> {
+        #[cfg(feature="profiler")]
+        timer!("udp::close");
+
         let mut inner = self.inner.borrow_mut();
 
         let socket = match inner.sockets.remove(&fd) {
@@ -239,6 +249,9 @@ impl<RT: Runtime> UdpPeer<RT> {
 
     /// Consumes the payload from a buffer.
     pub fn receive(&self, ipv4_header: &Ipv4Header, buf: RT::Buf) -> Result<(), Fail> {
+        #[cfg(feature="profiler")]
+        timer!("udp::receive");
+
         let mut inner = self.inner.borrow_mut();
         let (hdr, data) = UdpHeader::parse(ipv4_header, buf, inner.rt.udp_options().rx_checksum())?;
         debug!("UDP received {:?}", hdr);
@@ -264,6 +277,9 @@ impl<RT: Runtime> UdpPeer<RT> {
 
     /// Pushes data to a socket.
     pub fn push(&self, fd: FileDescriptor, buf: RT::Buf) -> Result<(), Fail> {
+        #[cfg(feature="profiler")]
+        timer!("udp::push");
+
         let inner = self.inner.borrow();
         match inner.sockets.get(&fd) {
             Some(s) if s.local().is_some() && s.remote().is_some() => {
@@ -278,6 +294,9 @@ impl<RT: Runtime> UdpPeer<RT> {
     }
 
     pub fn pushto(&self, fd: FileDescriptor, buf: RT::Buf, to: ipv4::Endpoint) -> Result<(), Fail> {
+        #[cfg(feature="profiler")]
+        timer!("udp::pushto");
+
         let inner = self.inner.borrow();
         let local = match inner.sockets.get(&fd) {
             Some(s) if s.local().is_some() => s.local(),
@@ -288,6 +307,9 @@ impl<RT: Runtime> UdpPeer<RT> {
 
     /// Pops data from a socket.
     pub fn pop(&self, fd: FileDescriptor) -> PopFuture<RT> {
+        #[cfg(feature="profiler")]
+        timer!("udp::pop");
+
         let inner = self.inner.borrow();
         let listener = match inner.sockets.get(&fd) {
             Some(s) if s.local().is_some() => {
