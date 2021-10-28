@@ -3,13 +3,20 @@
 
 #===============================================================================
 
-export CARGO_FLAGS ?= --release
+export CARGO ?= $(HOME)/.cargo/bin/cargo
+
+export BUILD ?= --release
+
+export CARGO_FLAGS ?= $(BUILD)
 
 #===============================================================================
 
 all:
-	cargo build $(CARGO_FLAGS)
+	$(CARGO) build --all $(CARGO_FLAGS)
+
+test:
+	$(CARGO) test $(CARGO_FLAGS)
 
 clean:
-	cargo clean && \
-	rm Cargo.lock
+	$(CARGO) clean && \
+	rm -f Cargo.lock
