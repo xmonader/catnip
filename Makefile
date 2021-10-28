@@ -14,6 +14,9 @@ export CARGO_FLAGS ?= $(BUILD)
 all:
 	$(CARGO) build --all $(CARGO_FLAGS)
 
+test:
+	$(CARGO) test $(CARGO_FLAGS)
+
 clean:
 	$(CARGO) clean && \
 	rm -f Cargo.lock
