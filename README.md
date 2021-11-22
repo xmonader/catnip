@@ -7,6 +7,11 @@ Catnip
 _Catnip_ is a TCP/IP stack that focuses on being an embeddable, low-latency
 solution for user-space networking.
 
+> This project is a component of _Demikernel_ - a libOS architecture for
+kernel-bypass devices.
+
+> To read more about _Demikernel_ check out https://aka.ms/demikernel.
+
 Building and Running
 ---------------------
 
