@@ -16,5 +16,6 @@ test:
 	$(CARGO) test $(CARGO_FLAGS)
 
 clean:
+	rm -rf target && \
 	$(CARGO) clean && \
 	rm -f Cargo.lock
