@@ -7,16 +7,15 @@ export CARGO ?= $(HOME)/.cargo/bin/cargo
 
 export BUILD ?= --release
 
-export CARGO_FLAGS ?= $(BUILD)
-
 #===============================================================================
 
 all:
-	$(CARGO) build --all $(CARGO_FLAGS)
+	$(CARGO) build --all $(BUILD) $(CARGO_FLAGS)
 
 test:
 	$(CARGO) test $(CARGO_FLAGS)
 
 clean:
+	rm -rf target && \
 	$(CARGO) clean && \
 	rm -f Cargo.lock
