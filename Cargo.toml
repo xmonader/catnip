@@ -1,6 +1,12 @@
 [package]
 name = "catnip"
 version = "0.6.0"
+author = "Microsoft Corporation"
+description = "Fast User-Space TCP/UDP Stack"
+homepage = "https://aka.ms/demikernel"
+repository = "https://github.com/demikernel/catnip"
+readme = "README.md"
+license-file = "LICENSE.txt"
 edition = "2018"
 
 [dependencies]
