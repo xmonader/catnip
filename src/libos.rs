@@ -48,10 +48,6 @@ impl<RT: Runtime> LibOS<RT> {
         &self.rt
     }
 
-    pub fn use_posix_stack(&mut self) {
-        self.engine.use_posix_stack();
-    }
-
     ///
     /// **Brief**
     ///
@@ -382,7 +378,6 @@ impl<RT: Runtime> LibOS<RT> {
         match self.rt.scheduler().take(handle) {
             Operation::Tcp(f) => f.expect_result(),
             Operation::Udp(f) => f.expect_result(),
-            Operation::Posix(f) => f.expect_result(),
             Operation::Background(..) => panic!("`take_operation` attempted on background task!"),
         }
     }
