@@ -49,31 +49,17 @@ fn catnip_tcp_connection_setup() {
     do_tcp_connection_setup(&mut libos, PORT_BASE);
 }
 
-#[test]
-#[ignore]
-fn posix_tcp_connection_setup() {
-    let (tx, rx) = crossbeam_channel::unbounded();
-    let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, tx, rx, arp());
-
-    libos.use_posix_stack();
-    do_tcp_connection_setup(&mut libos, PORT_BASE);
-}
-
 //==============================================================================
 // Establish Connection
 //==============================================================================
 
 /// Tests if data can be successfully established.
-fn do_tcp_establish_connection(use_posix: bool, port: u16) {
+fn do_tcp_establish_connection(port: u16) {
     let (alice_tx, alice_rx) = crossbeam_channel::unbounded();
     let (bob_tx, bob_rx) = crossbeam_channel::unbounded();
 
     let alice = thread::spawn(move || {
         let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, alice_tx, bob_rx, arp());
-
-        if use_posix {
-            libos.use_posix_stack();
-        }
 
         let port = ip::Port::try_from(port).unwrap();
         let local = ipv4::Endpoint::new(ALICE_IPV4, port);
@@ -95,10 +81,6 @@ fn do_tcp_establish_connection(use_posix: bool, port: u16) {
     let bob = thread::spawn(move || {
         let mut libos = DummyLibOS::new(BOB_MAC, BOB_IPV4, bob_tx, alice_rx, arp());
 
-        if use_posix {
-            libos.use_posix_stack();
-        }
-
         let port = ip::Port::try_from(port).unwrap();
         let remote = ipv4::Endpoint::new(ALICE_IPV4, port);
 
@@ -117,13 +99,7 @@ fn do_tcp_establish_connection(use_posix: bool, port: u16) {
 
 #[test]
 fn catnip_tcp_establish_connection() {
-    do_tcp_establish_connection(false, PORT_BASE + 1)
-}
-
-#[test]
-#[ignore]
-fn posix_tcp_establish_connection() {
-    do_tcp_establish_connection(true, PORT_BASE + 1)
+    do_tcp_establish_connection(PORT_BASE + 1)
 }
 
 //==============================================================================
@@ -131,16 +107,12 @@ fn posix_tcp_establish_connection() {
 //==============================================================================
 
 /// Tests if data can be successfully established.
-fn do_tcp_push_remote(use_posix: bool, port: u16) {
+fn do_tcp_push_remote(port: u16) {
     let (alice_tx, alice_rx) = crossbeam_channel::unbounded();
     let (bob_tx, bob_rx) = crossbeam_channel::unbounded();
 
     let alice = thread::spawn(move || {
         let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, alice_tx, bob_rx, arp());
-
-        if use_posix {
-            libos.use_posix_stack();
-        }
 
         let port = ip::Port::try_from(port).unwrap();
         let local = ipv4::Endpoint::new(ALICE_IPV4, port);
@@ -172,10 +144,6 @@ fn do_tcp_push_remote(use_posix: bool, port: u16) {
     let bob = thread::spawn(move || {
         let mut libos = DummyLibOS::new(BOB_MAC, BOB_IPV4, bob_tx, alice_rx, arp());
 
-        if use_posix {
-            libos.use_posix_stack();
-        }
-
         let port = ip::Port::try_from(port).unwrap();
         let remote = ipv4::Endpoint::new(ALICE_IPV4, port);
 
@@ -202,7 +170,7 @@ fn do_tcp_push_remote(use_posix: bool, port: u16) {
 
 #[test]
 fn catnip_tcp_push_remote() {
-    do_tcp_push_remote(false, PORT_BASE + 2)
+    do_tcp_push_remote(PORT_BASE + 2)
 }
 
 //==============================================================================
@@ -370,17 +338,12 @@ fn catnip_tcp_bad_accept() {
 //==============================================================================
 
 /// Tests if data can be successfully established.
-fn do_tcp_bad_connect(use_posix: bool, port: u16) {
+fn do_tcp_bad_connect(port: u16) {
     let (alice_tx, alice_rx) = crossbeam_channel::unbounded();
     let (bob_tx, bob_rx) = crossbeam_channel::unbounded();
 
     let alice = thread::spawn(move || {
         let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, alice_tx, bob_rx, arp());
-
-        if use_posix {
-            libos.use_posix_stack();
-        }
-
         let port = ip::Port::try_from(port).unwrap();
         let local = ipv4::Endpoint::new(ALICE_IPV4, port);
 
@@ -400,10 +363,6 @@ fn do_tcp_bad_connect(use_posix: bool, port: u16) {
 
     let bob = thread::spawn(move || {
         let mut libos = DummyLibOS::new(BOB_MAC, BOB_IPV4, bob_tx, alice_rx, arp());
-
-        if use_posix {
-            libos.use_posix_stack();
-        }
 
         let port = ip::Port::try_from(port).unwrap();
         let remote = ipv4::Endpoint::new(ALICE_IPV4, port);
@@ -435,11 +394,5 @@ fn do_tcp_bad_connect(use_posix: bool, port: u16) {
 
 #[test]
 fn catnip_tcp_bad_connect() {
-    do_tcp_bad_connect(false, PORT_BASE + 5)
-}
-
-#[test]
-#[ignore]
-fn posix_tcp_push_remote() {
-    do_tcp_push_remote(true, PORT_BASE + 5)
+    do_tcp_bad_connect(PORT_BASE + 5)
 }

@@ -19,9 +19,7 @@
 //
 use crate::{
     collections::waker_page::{WakerPage, WakerPageRef, WAKER_PAGE_SIZE},
-    protocols::{
-        posix::operations::PosixOperation, tcp::operations::TcpOperation, udp::UdpOperation,
-    },
+    protocols::{tcp::operations::TcpOperation, udp::UdpOperation},
     runtime::Runtime,
     sync::SharedWaker,
 };
@@ -49,7 +47,6 @@ use unicycle::pin_slab::PinSlab;
 pub enum Operation<RT: Runtime> {
     Tcp(TcpOperation<RT>),
     Udp(UdpOperation<RT>),
-    Posix(PosixOperation<RT>),
 
     // These are expected to have long lifetimes and be large enough to justify another allocation.
     Background(Pin<Box<dyn Future<Output = ()>>>),
@@ -64,7 +61,6 @@ impl<RT: Runtime> Future for Operation<RT> {
         match self.get_mut() {
             Operation::Tcp(ref mut f) => Future::poll(Pin::new(f), ctx),
             Operation::Udp(ref mut f) => Future::poll(Pin::new(f), ctx),
-            Operation::Posix(ref mut f) => Future::poll(Pin::new(f), ctx),
             Operation::Background(ref mut f) => Future::poll(Pin::new(f), ctx),
         }
     }
