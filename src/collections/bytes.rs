@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::runtime::RuntimeBuf;
+use crate::{fail::Fail, runtime::RuntimeBuf};
 
 use std::{
     fmt,
@@ -105,11 +105,15 @@ impl Eq for BytesMut {}
 
 /// Mutable Buffer
 impl BytesMut {
-    pub fn zeroed(capacity: usize) -> Self {
-        assert!(capacity > 0);
-        Self {
-            buf: unsafe { Arc::new_zeroed_slice(capacity).assume_init() },
+    pub fn zeroed(capacity: usize) -> Result<Self, Fail> {
+        if capacity == 0 {
+            return Err(Fail::Invalid {
+                details: "zero-capacity buffer",
+            });
         }
+        Ok(Self {
+            buf: unsafe { Arc::new_zeroed_slice(capacity).assume_init() },
+        })
     }
 
     /// Converts the target mutable buffer into a non-mutable one.
@@ -125,7 +129,7 @@ impl BytesMut {
 // Conversion trait implementation for mutable buffers.
 impl From<&[u8]> for BytesMut {
     fn from(buf: &[u8]) -> Self {
-        let mut b = Self::zeroed(buf.len());
+        let mut b = Self::zeroed(buf.len()).unwrap();
         b[..].copy_from_slice(buf);
         b
     }

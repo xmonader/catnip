@@ -47,11 +47,10 @@ impl DummyLibOS {
     }
 
     /// Cooks a SGA buffer.
-    pub fn cook_data(libos: &mut LibOS<DummyRuntime>) -> dmtr_sgarray_t {
-        let size = 32;
+    pub fn cook_data(libos: &mut LibOS<DummyRuntime>, size: usize) -> dmtr_sgarray_t {
         let fill_char = b'a';
 
-        let mut buf = BytesMut::zeroed(size);
+        let mut buf = BytesMut::zeroed(size).unwrap();
         for a in &mut buf[..] {
             *a = fill_char;
         }
