@@ -81,7 +81,7 @@ fn udp_push_remote() {
         libos.bind(sockfd, alice_addr).unwrap();
 
         // Cook some data.
-        let body_sga = DummyLibOS::cook_data(&mut libos);
+        let body_sga = DummyLibOS::cook_data(&mut libos, 32);
 
         // Push data.
         let qt = libos.pushto(sockfd, &body_sga, bob_addr).unwrap();
@@ -152,7 +152,7 @@ fn udp_lookback() {
         libos.bind(sockfd, alice_addr).unwrap();
 
         // Cook some data.
-        let body_sga = DummyLibOS::cook_data(&mut libos);
+        let body_sga = DummyLibOS::cook_data(&mut libos, 32);
 
         // Push data.
         let qt = libos.pushto(sockfd, &body_sga, bob_addr).unwrap();

@@ -269,7 +269,7 @@ mod tests {
     fn test_out_of_order() {
         let now = Instant::now();
         let receiver = Receiver::<TestRuntime>::new(Wrapping(0), 65536, 0);
-        let buf = BytesMut::zeroed(16).freeze();
+        let buf = BytesMut::zeroed(16).unwrap().freeze();
         must_let!(let Err(Fail::Ignored { .. }) = receiver.receive_data(Wrapping(16), buf.clone(), now));
         must_let!(let Ok(..) = receiver.receive_data(Wrapping(0), buf.clone(), now));
         assert_eq!(receiver.recv_seq_no.get(), Wrapping(32))

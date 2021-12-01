@@ -13,7 +13,7 @@ all:
 	$(CARGO) build --all $(BUILD) $(CARGO_FLAGS)
 
 test:
-	$(CARGO) test $(CARGO_FLAGS)
+	$(CARGO) test $(BUILD) $(CARGO_FLAGS)
 
 clean:
 	rm -rf target && \

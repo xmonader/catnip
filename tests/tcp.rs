@@ -153,7 +153,7 @@ fn do_tcp_push_remote(port: u16) {
         assert_eq!(libos.wait(qt).qr_opcode, dmtr_opcode_t::DMTR_OPC_CONNECT);
 
         // Cook some data.
-        let body_sga = DummyLibOS::cook_data(&mut libos);
+        let body_sga = DummyLibOS::cook_data(&mut libos, 32);
 
         // Push data.
         let qt = libos.push(sockfd, &body_sga).unwrap();
