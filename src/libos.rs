@@ -205,6 +205,11 @@ impl<RT: Runtime> LibOS<RT> {
         timer!("catnip::push");
         trace!("push(): fd={:?}", fd);
         let buf = self.rt.clone_sgarray(sga);
+        if buf.len() == 0 {
+            return Err(Fail::Invalid {
+                details: "zero-length buffer",
+            });
+        }
         let future = self.engine.push(fd, buf)?;
         Ok(self.rt.scheduler().insert(future).into_raw())
     }
@@ -215,6 +220,11 @@ impl<RT: Runtime> LibOS<RT> {
         #[cfg(feature = "profiler")]
         timer!("catnip::push2");
         trace!("push2(): fd={:?}", fd);
+        if buf.len() == 0 {
+            return Err(Fail::Invalid {
+                details: "zero-length buffer",
+            });
+        }
         let future = self.engine.push(fd, buf)?;
         Ok(self.rt.scheduler().insert(future).into_raw())
     }
@@ -228,6 +238,11 @@ impl<RT: Runtime> LibOS<RT> {
         #[cfg(feature = "profiler")]
         timer!("catnip::pushto");
         let buf = self.rt.clone_sgarray(sga);
+        if buf.len() == 0 {
+            return Err(Fail::Invalid {
+                details: "zero-length buffer",
+            });
+        }
         let future = self.engine.pushto(fd, buf, to)?;
         Ok(self.rt.scheduler().insert(future).into_raw())
     }
@@ -240,6 +255,11 @@ impl<RT: Runtime> LibOS<RT> {
     ) -> Result<QToken, Fail> {
         #[cfg(feature = "profiler")]
         timer!("catnip::pushto2");
+        if buf.len() == 0 {
+            return Err(Fail::Invalid {
+                details: "zero-length buffer",
+            });
+        }
         let future = self.engine.pushto(fd, buf, to)?;
         Ok(self.rt.scheduler().insert(future).into_raw())
     }
