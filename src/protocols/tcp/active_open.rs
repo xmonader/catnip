@@ -105,19 +105,27 @@ impl<RT: Runtime> ActiveOpenSocket<RT> {
     }
 
     pub fn receive(&mut self, header: &TcpHeader) {
+        let expected_seq = self.local_isn + Wrapping(1);
+
+        // Bail if we didn't receive a ACK packet with the right sequence number.
+        if !(header.ack && header.ack_num == expected_seq) {
+            return;
+        }
+
+        // Check if our peer is refusing our connection request.
         if header.rst {
             self.set_result(Err(Fail::ConnectionRefused {}));
             return;
         }
-        let expected_seq = self.local_isn + Wrapping(1);
 
-        // Bail if we didn't receive a SYN+ACK packet with the right sequence number.
-        if !(header.ack && header.syn && header.ack_num == expected_seq) {
+        // Bail if we didn't receive a SYN packet.
+        if !header.syn {
             return;
         }
 
-        // Acknowledge the SYN+ACK segment.
         debug!("Received SYN+ACK: {:?}", header);
+
+        // Acknowledge the SYN+ACK segment.
         let remote_link_addr = match self.arp.try_query(self.remote.address()) {
             Some(r) => r,
             None => panic!("TODO: Clean up ARP query control flow"),
