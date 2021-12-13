@@ -263,8 +263,8 @@ impl<RT: Runtime> PassiveSocket<RT> {
         ready: Rc<RefCell<ReadySockets<RT>>>,
     ) -> impl Future<Output = ()> {
         let tcp_options = rt.tcp_options();
-        let handshake_retries = 3usize;
-        let handshake_timeout = Duration::from_secs(5);
+        let handshake_retries: usize = tcp_options.handshake_retries;
+        let handshake_timeout: Duration = tcp_options.handshake_timeout;
 
         async move {
             for _ in 0..handshake_retries {
