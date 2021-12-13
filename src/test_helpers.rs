@@ -87,6 +87,10 @@ impl TestRuntime {
         self.inner.borrow_mut().outgoing.pop_front().unwrap()
     }
 
+    pub fn pop_frame_unchecked(&self) -> Option<Bytes> {
+        self.inner.borrow_mut().outgoing.pop_front()
+    }
+
     pub fn push_frame(&self, buf: Bytes) {
         self.inner.borrow_mut().incoming.push_back(buf);
     }
