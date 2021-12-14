@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 use crate::{
-    collections::bytes::Bytes,
+    collections::bytes::{Bytes, BytesMut},
     engine::Engine,
     fail::Fail,
     file_table::FileDescriptor,
@@ -12,10 +12,10 @@ use crate::{
         ipv4::{self, Ipv4Header},
         tcp::{
             operations::{AcceptFuture, ConnectFuture},
-            segment::TcpHeader,
+            segment::{TcpHeader, TcpSegment},
         },
     },
-    runtime::Runtime,
+    runtime::{PacketBuf, Runtime, RuntimeBuf},
     test_helpers::{self, TestRuntime},
 };
 use futures::task::noop_waker_ref;
@@ -29,6 +29,106 @@ use std::{
     task::{Context, Poll},
     time::{Duration, Instant},
 };
+
+//=============================================================================
+
+/// Tests connection refuse due to missing syn.
+#[test]
+fn test_refuse_connection_missing_syn() {
+    let _ctx = Context::from_waker(noop_waker_ref());
+    let mut now = Instant::now();
+
+    // Connection parameters
+    let listen_port: ip::Port = ip::Port::try_from(80).unwrap();
+    let listen_addr: ipv4::Endpoint = ipv4::Endpoint::new(test_helpers::BOB_IPV4, listen_port);
+
+    // Setup peers.
+    let mut server = test_helpers::new_bob2(now);
+    let mut client = test_helpers::new_alice2(now);
+
+    // Server: LISTEN state at T(0).
+    let _: AcceptFuture<TestRuntime> = connection_setup_closed_listen(&mut server, listen_addr);
+
+    // T(0) -> T(1)
+    advance_clock(Some(&mut server), Some(&mut client), &mut now);
+
+    // Client: SYN_SENT state at T(1).
+    let (_, _, bytes): (FileDescriptor, ConnectFuture<TestRuntime>, Bytes) =
+        connection_setup_listen_syn_sent(&mut client, listen_addr);
+
+    // Sanity check packet.
+    check_packet_pure_syn(
+        bytes.clone(),
+        test_helpers::ALICE_MAC,
+        test_helpers::BOB_MAC,
+        test_helpers::ALICE_IPV4,
+        test_helpers::BOB_IPV4,
+        listen_port,
+    );
+
+    // Temper packet.
+    let (eth2_header, ipv4_header, tcp_header): (Ethernet2Header, Ipv4Header, TcpHeader) =
+        extract_headers(bytes.clone());
+    let segment: TcpSegment<<TestRuntime as Runtime>::Buf> = TcpSegment {
+        ethernet2_hdr: eth2_header,
+        ipv4_hdr: ipv4_header,
+        tcp_hdr: TcpHeader {
+            src_port: tcp_header.src_port,
+            dst_port: tcp_header.dst_port,
+            seq_num: tcp_header.seq_num,
+            ack_num: tcp_header.ack_num,
+            ns: tcp_header.ns,
+            cwr: tcp_header.cwr,
+            ece: tcp_header.ece,
+            urg: tcp_header.urg,
+            ack: tcp_header.ack,
+            psh: tcp_header.psh,
+            rst: tcp_header.rst,
+            syn: false,
+            fin: tcp_header.fin,
+            window_size: tcp_header.window_size,
+            urgent_pointer: tcp_header.urgent_pointer,
+            num_options: tcp_header.num_options,
+            option_list: tcp_header.option_list,
+        },
+        data: Bytes::empty(),
+        tx_checksum_offload: false,
+    };
+
+    // Serialize segment.
+    let buf: Bytes = serialize_segment(segment);
+
+    // T(1) -> T(2)
+    advance_clock(Some(&mut server), Some(&mut client), &mut now);
+
+    // Server: SYN_RCVD state at T(2).
+    must_let!(let Err(Fail::Malformed{ details : "Invalid flags"}) = server.receive(buf));
+}
+
+//=============================================================================
+
+/// Extracts headers of a TCP packet.
+fn extract_headers(bytes: Bytes) -> (Ethernet2Header, Ipv4Header, TcpHeader) {
+    let (eth2_header, eth2_payload) = Ethernet2Header::parse(bytes).unwrap();
+    let (ipv4_header, ipv4_payload) = Ipv4Header::parse(eth2_payload).unwrap();
+    let (tcp_header, _) = TcpHeader::parse(&ipv4_header, ipv4_payload, false).unwrap();
+
+    return (eth2_header, ipv4_header, tcp_header);
+}
+
+//=============================================================================
+
+/// Serializes a TCP segment.
+fn serialize_segment(pkt: TcpSegment<Bytes>) -> Bytes {
+    let header_size: usize = pkt.header_size();
+    let body_size: usize = pkt.body_size();
+    let mut buf: BytesMut = BytesMut::zeroed(header_size + body_size).unwrap();
+    pkt.write_header(&mut buf[..header_size]);
+    if let Some(body) = pkt.take_body() {
+        buf[header_size..].copy_from_slice(&body[..]);
+    }
+    buf.freeze()
+}
 
 //=============================================================================
 
