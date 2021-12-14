@@ -32,6 +32,50 @@ use std::{
 
 //=============================================================================
 
+//tests connection timeout.
+#[test]
+fn test_connection_timeout() {
+    let mut ctx = Context::from_waker(noop_waker_ref());
+    let mut now = Instant::now();
+
+    // Connection parameters
+    let listen_port: ip::Port = ip::Port::try_from(80).unwrap();
+    let listen_addr: ipv4::Endpoint = ipv4::Endpoint::new(test_helpers::BOB_IPV4, listen_port);
+
+    // Setup client.
+    let mut client = test_helpers::new_alice2(now);
+    let nretries: usize = client.rt().tcp_options().handshake_retries;
+    let timeout: Duration = client.rt().tcp_options().handshake_timeout;
+
+    // T(0) -> T(1)
+    advance_clock(None, Some(&mut client), &mut now);
+
+    // Client: SYN_SENT state at T(1).
+    let (_, mut connect_future, bytes): (FileDescriptor, ConnectFuture<TestRuntime>, Bytes) =
+        connection_setup_listen_syn_sent(&mut client, listen_addr);
+
+    // Sanity check packet.
+    check_packet_pure_syn(
+        bytes.clone(),
+        test_helpers::ALICE_MAC,
+        test_helpers::BOB_MAC,
+        test_helpers::ALICE_IPV4,
+        test_helpers::BOB_IPV4,
+        listen_port,
+    );
+
+    for _ in 0..nretries {
+        for _ in 0..timeout.as_secs() {
+            advance_clock(None, Some(&mut client), &mut now);
+        }
+        client.rt().poll_scheduler();
+    }
+
+    must_let!(let Poll::Ready(Err(Fail::Timeout{})) = Future::poll(Pin::new(&mut connect_future), &mut ctx));
+}
+
+//=============================================================================
+
 /// Refuse a connection.
 #[test]
 fn test_refuse_connection_early_rst() {
