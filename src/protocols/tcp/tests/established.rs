@@ -282,3 +282,49 @@ pub fn test_send_recv_loop() {
         );
     }
 }
+
+//=============================================================================
+
+#[test]
+pub fn test_send_recv_round_loop() {
+    let mut ctx = Context::from_waker(noop_waker_ref());
+    let mut now = Instant::now();
+
+    // Connection parameters
+    let listen_port: ip::Port = ip::Port::try_from(80).unwrap();
+    let listen_addr: ipv4::Endpoint = ipv4::Endpoint::new(test_helpers::BOB_IPV4, listen_port);
+
+    // Setup peers.
+    let mut server: Engine<TestRuntime> = test_helpers::new_bob2(now);
+    let mut client: Engine<TestRuntime> = test_helpers::new_alice2(now);
+    let window_scale: u8 = client.rt().tcp_options().window_scale;
+    let max_window_size: u32 = (client.rt().tcp_options().receive_window_size as u32)
+        .checked_shl(window_scale as u32)
+        .unwrap();
+
+    let (server_fd, client_fd): (FileDescriptor, FileDescriptor) = connection_setup(
+        &mut ctx,
+        &mut now,
+        &mut server,
+        &mut client,
+        listen_port,
+        listen_addr,
+    );
+
+    let bufsize: u32 = 64;
+    let buf: Bytes = cook_buffer(bufsize as usize, None);
+
+    for i in 0..((max_window_size + 1) / bufsize) {
+        send_recv_round(
+            &mut ctx,
+            &mut now,
+            &mut server,
+            &mut client,
+            server_fd,
+            client_fd,
+            max_window_size as u16,
+            Wrapping(1 + i * bufsize),
+            buf.clone(),
+        );
+    }
+}
