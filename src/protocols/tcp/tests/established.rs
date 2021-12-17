@@ -328,3 +328,93 @@ pub fn test_send_recv_round_loop() {
         );
     }
 }
+
+//=============================================================================
+
+/// Tests one way communication, with some random transmission delay. This
+/// should force the receiving peer to send pure ACKs to the sender, as well as
+/// the sender side to trigger the RTO calculation logic.
+#[test]
+pub fn test_send_recv_with_delay() {
+    let mut ctx = Context::from_waker(noop_waker_ref());
+    let mut now = Instant::now();
+
+    // Connection parameters
+    let listen_port: ip::Port = ip::Port::try_from(80).unwrap();
+    let listen_addr: ipv4::Endpoint = ipv4::Endpoint::new(test_helpers::BOB_IPV4, listen_port);
+
+    // Setup peers.
+    let mut server: Engine<TestRuntime> = test_helpers::new_bob2(now);
+    let mut client: Engine<TestRuntime> = test_helpers::new_alice2(now);
+    let window_scale: u8 = client.rt().tcp_options().window_scale;
+    let max_window_size: u32 = (client.rt().tcp_options().receive_window_size as u32)
+        .checked_shl(window_scale as u32)
+        .unwrap();
+
+    let (server_fd, client_fd): (FileDescriptor, FileDescriptor) = connection_setup(
+        &mut ctx,
+        &mut now,
+        &mut server,
+        &mut client,
+        listen_port,
+        listen_addr,
+    );
+
+    let bufsize: u32 = 64;
+    let buf: Bytes = cook_buffer(bufsize as usize, None);
+    let mut recv_seq_no: Wrapping<u32> = Wrapping(1);
+    let mut seq_no: Wrapping<u32> = Wrapping(1);
+    let mut inflight = VecDeque::<Bytes>::new();
+
+    for _ in 0..((max_window_size + 1) / bufsize) {
+        // Push data.
+        let (bytes, _): (Bytes, usize) = send_data(
+            &mut ctx,
+            &mut now,
+            &mut server,
+            &mut client,
+            client_fd,
+            max_window_size as u16,
+            seq_no,
+            None,
+            buf.clone(),
+        );
+
+        seq_no = seq_no.add(Wrapping(bufsize));
+
+        inflight.push_back(bytes);
+
+        // Pop data oftentimes.
+        if rand::random() {
+            if let Some(bytes) = inflight.pop_front() {
+                recv_data(&mut ctx, &mut server, &mut client, server_fd, bytes.clone());
+                recv_seq_no = recv_seq_no.add(Wrapping(bufsize as u32));
+            }
+        }
+
+        // Pop pure ACK
+        recv_pure_ack(
+            &mut now,
+            &mut server,
+            &mut client,
+            max_window_size as u16,
+            recv_seq_no,
+        );
+    }
+
+    // Pop inflight packets.
+    while let Some(bytes) = inflight.pop_front() {
+        // Pop data.
+        recv_data(&mut ctx, &mut server, &mut client, server_fd, bytes.clone());
+        recv_seq_no = recv_seq_no.add(Wrapping(bufsize as u32));
+
+        // Send pure ack.
+        recv_pure_ack(
+            &mut now,
+            &mut server,
+            &mut client,
+            max_window_size as u16,
+            recv_seq_no,
+        );
+    }
+}
