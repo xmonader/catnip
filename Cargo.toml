@@ -1,6 +1,6 @@
 [package]
 name = "catnip"
-version = "0.6.0"
+version = "0.7.0"
 authors = [ "Microsoft Corporation" ]
 description = "Fast User-Space TCP/UDP Stack"
 homepage = "https://aka.ms/demikernel"
