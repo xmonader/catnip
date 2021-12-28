@@ -186,6 +186,7 @@ impl<RT: Runtime> PassiveSocket<RT> {
             );
             let receiver = Receiver::new(
                 remote_isn + Wrapping(1),
+                self.rt.tcp_options().ack_delay_timeout,
                 local_window_size,
                 local_window_scale,
             );
