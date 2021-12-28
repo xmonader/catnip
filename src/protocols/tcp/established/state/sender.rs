@@ -275,6 +275,11 @@ impl<RT: Runtime> Sender<RT> {
         Some(buf)
     }
 
+    pub fn top_size_unsent(&self) -> Option<usize> {
+        let unsent_queue = self.unsent_queue.borrow_mut();
+        Some(unsent_queue.front()?.len())
+    }
+
     pub fn update_remote_window(&self, window_size_hdr: u16) -> Result<(), Fail> {
         if self.state.get() != SenderState::Open {
             return Err(Fail::Ignored {

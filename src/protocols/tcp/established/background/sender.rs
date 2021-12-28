@@ -87,9 +87,13 @@ pub async fn sender<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fail> {
         futures::pin_mut!(ltci_changed);
 
         let effective_cwnd = cwnd + ltci;
+        let next_buf_size = cb
+            .sender
+            .top_size_unsent()
+            .expect("no buffer in unsent queue");
 
         let Wrapping(sent_data) = sent_seq - base_seq;
-        if win_sz <= sent_data
+        if win_sz <= (sent_data + next_buf_size as u32)
             || effective_cwnd <= sent_data
             || (effective_cwnd - sent_data) <= cb.sender.mss as u32
             || (win_sz - sent_data) <= cb.sender.mss as u32
