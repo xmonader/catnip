@@ -52,10 +52,6 @@ impl<RT: Runtime> EstablishedSocket<RT> {
         self.cb.receiver.peek()
     }
 
-    pub fn recv(&self) -> Result<Option<RT::Buf>, Fail> {
-        self.cb.receiver.recv()
-    }
-
     pub fn poll_recv(&self, ctx: &mut Context) -> Poll<Result<RT::Buf, Fail>> {
         self.cb.receiver.poll_recv(ctx)
     }

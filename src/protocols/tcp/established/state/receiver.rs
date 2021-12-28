@@ -140,27 +140,6 @@ impl<RT: Runtime> Receiver<RT> {
         Ok(segment)
     }
 
-    pub fn recv(&self) -> Result<Option<RT::Buf>, Fail> {
-        if self.base_seq_no.get() == self.recv_seq_no.get() {
-            if self.state.get() != ReceiverState::Open {
-                return Err(Fail::ResourceNotFound {
-                    details: "Receiver closed",
-                });
-            }
-            return Ok(None);
-        }
-
-        let segment = self
-            .recv_queue
-            .borrow_mut()
-            .pop_front()
-            .expect("recv_seq > base_seq without data in queue?");
-        self.base_seq_no
-            .modify(|b| b + Wrapping(segment.len() as u32));
-
-        Ok(Some(segment))
-    }
-
     pub fn poll_recv(&self, ctx: &mut Context) -> Poll<Result<RT::Buf, Fail>> {
         if self.base_seq_no.get() == self.recv_seq_no.get() {
             if self.state.get() != ReceiverState::Open {
