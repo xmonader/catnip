@@ -35,6 +35,9 @@ pub enum SenderState {
     Reset,
 }
 
+/// Hard limit for unsent queue.
+const UNSENT_QUEUE_CUTOFF: usize = 1024;
+
 pub struct Sender<RT: Runtime> {
     pub state: WatchedValue<SenderState>,
 
@@ -162,6 +165,14 @@ impl<RT: Runtime> Sender<RT> {
                 }
             }
         }
+
+        // Too fast.
+        if self.unsent_queue.borrow().len() > UNSENT_QUEUE_CUTOFF {
+            return Err(Fail::ResourceBusy {
+                details: "too many packets to send",
+            });
+        }
+
         // Slow path: Delegating sending the data to background processing.
         self.unsent_queue.borrow_mut().push_back(buf);
         self.unsent_seq_no.modify(|s| s + Wrapping(buf_len));
