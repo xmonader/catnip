@@ -96,7 +96,6 @@ pub async fn sender<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fail> {
         if win_sz <= (sent_data + next_buf_size as u32)
             || effective_cwnd <= sent_data
             || (effective_cwnd - sent_data) <= cb.sender.mss as u32
-            || (win_sz - sent_data) <= cb.sender.mss as u32
         {
             futures::select_biased! {
                 _ = base_seq_changed => continue 'top,
