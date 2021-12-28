@@ -30,7 +30,7 @@ impl<RT: Runtime> Default for TcpOptions<RT> {
     fn default() -> Self {
         TcpOptions {
             advertised_mss: DEFAULT_MSS,
-            congestion_ctrl_type: cc::Cubic::new,
+            congestion_ctrl_type: cc::None::new,
             congestion_ctrl_options: None,
             handshake_retries: 5,
             handshake_timeout: Duration::from_secs(3),
