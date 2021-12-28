@@ -133,27 +133,33 @@ impl<RT: Runtime> Sender<RT> {
         // The limited transmit algorithm can increase the effective size of cwnd by up to 2MSS
         let effective_cwnd = cwnd + self.congestion_ctrl.get_limited_transmit_cwnd_increase();
 
-        if win_sz > 0 && win_sz >= in_flight_after_send && effective_cwnd >= in_flight_after_send {
-            if let Some(remote_link_addr) = cb.arp.try_query(cb.remote.address()) {
-                // This hook is primarily intended to record the last time we sent data, so we can later tell if the connection has been idle
-                self.congestion_ctrl.on_send(&self, sent_data);
+        if self.unsent_queue.borrow().len() == 0 {
+            if win_sz > 0
+                && win_sz >= in_flight_after_send
+                && effective_cwnd >= in_flight_after_send
+            {
+                if let Some(remote_link_addr) = cb.arp.try_query(cb.remote.address()) {
+                    // This hook is primarily intended to record the last time we sent data, so we can later tell if the connection has been idle
 
-                let mut header = cb.tcp_header();
-                header.seq_num = sent_seq;
-                cb.emit(header, buf.clone(), remote_link_addr);
+                    self.congestion_ctrl.on_send(&self, sent_data);
 
-                self.unsent_seq_no.modify(|s| s + Wrapping(buf_len));
-                self.sent_seq_no.modify(|s| s + Wrapping(buf_len));
-                let unacked_segment = UnackedSegment {
-                    bytes: buf,
-                    initial_tx: Some(cb.rt.now()),
-                };
-                self.unacked_queue.borrow_mut().push_back(unacked_segment);
-                if self.retransmit_deadline.get().is_none() {
-                    let rto = self.rto.borrow().estimate();
-                    self.retransmit_deadline.set(Some(cb.rt.now() + rto));
+                    let mut header = cb.tcp_header();
+                    header.seq_num = sent_seq;
+                    cb.emit(header, buf.clone(), remote_link_addr);
+
+                    self.unsent_seq_no.modify(|s| s + Wrapping(buf_len));
+                    self.sent_seq_no.modify(|s| s + Wrapping(buf_len));
+                    let unacked_segment = UnackedSegment {
+                        bytes: buf,
+                        initial_tx: Some(cb.rt.now()),
+                    };
+                    self.unacked_queue.borrow_mut().push_back(unacked_segment);
+                    if self.retransmit_deadline.get().is_none() {
+                        let rto = self.rto.borrow().estimate();
+                        self.retransmit_deadline.set(Some(cb.rt.now() + rto));
+                    }
+                    return Ok(());
                 }
-                return Ok(());
             }
         }
         // Slow path: Delegating sending the data to background processing.
