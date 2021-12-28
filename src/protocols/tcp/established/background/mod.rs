@@ -16,18 +16,13 @@ use futures::channel::mpsc;
 use futures::FutureExt;
 use std::{future::Future, rc::Rc};
 
-// TODO: This type is quite large. We may have to switch back to manual combinators?
-// 432:  acknowledger
-// 424:  retransmitter
-// 584:  sender
-// 1408: future total
 pub type BackgroundFuture<RT> = impl Future<Output = ()>;
 
 pub fn background<RT: Runtime>(
     cb: Rc<ControlBlock<RT>>,
     fd: FileDescriptor,
     _dead_socket_tx: mpsc::UnboundedSender<FileDescriptor>,
-    ) -> BackgroundFuture<RT> {
+) -> BackgroundFuture<RT> {
     async move {
         let acknowledger = acknowledger(cb.clone()).fuse();
         futures::pin_mut!(acknowledger);

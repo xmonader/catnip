@@ -205,25 +205,6 @@ impl<RT: Runtime> Peer<RT> {
         }
     }
 
-    pub fn recv(&self, fd: FileDescriptor) -> Result<Option<RT::Buf>, Fail> {
-        let inner = self.inner.borrow_mut();
-        let key = match inner.sockets.get(&fd) {
-            Some(Socket::Established { local, remote }) => (*local, *remote),
-            Some(..) => {
-                return Err(Fail::Malformed {
-                    details: "Recv: Socket not established",
-                })
-            }
-            None => return Err(Fail::Malformed { details: "Bad FD" }),
-        };
-        match inner.established.get(&key) {
-            Some(ref s) => s.recv(),
-            None => Err(Fail::Malformed {
-                details: "Socket not established",
-            }),
-        }
-    }
-
     pub fn poll_recv(&self, fd: FileDescriptor, ctx: &mut Context) -> Poll<Result<RT::Buf, Fail>> {
         let inner = self.inner.borrow_mut();
         let key = match inner.sockets.get(&fd) {

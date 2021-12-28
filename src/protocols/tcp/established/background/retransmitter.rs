@@ -14,11 +14,10 @@ pub enum RetransmitCause {
     FastRetransmit,
 }
 
-pub async fn retransmit<RT: Runtime>(
+async fn retransmit<RT: Runtime>(
     cause: RetransmitCause,
     cb: &Rc<ControlBlock<RT>>,
 ) -> Result<(), Fail> {
-
     // Pop unack'ed segment.
     let mut unacked_queue = cb.sender.unacked_queue.borrow_mut();
     let segment = match unacked_queue.front_mut() {
@@ -26,7 +25,7 @@ pub async fn retransmit<RT: Runtime>(
         None => {
             warn!("Retransmission with empty unacknowledged queue");
             return Ok(());
-        },
+        }
     };
 
     // TODO: Repacketization
