@@ -207,7 +207,12 @@ impl<RT: Runtime> ActiveOpenSocket<RT> {
             tcp_options.congestion_ctrl_type,
             tcp_options.congestion_ctrl_options,
         );
-        let receiver = Receiver::new(remote_seq_num, rx_window_size, local_window_scale);
+        let receiver = Receiver::new(
+            remote_seq_num,
+            self.rt.tcp_options().ack_delay_timeout,
+            rx_window_size,
+            local_window_scale,
+        );
         let cb = ControlBlock {
             local: self.local,
             remote: self.remote,

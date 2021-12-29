@@ -41,12 +41,15 @@ pub struct Receiver<RT: Runtime> {
     // an ACK. The sender, however, will still be computing the receive window relative to the
     // the old `ack_seq_no` until we send them an ACK (see the diagram in sender.rs).
     //
-    pub base_seq_no: WatchedValue<SeqNumber>,
+    base_seq_no: WatchedValue<SeqNumber>,
     pub recv_queue: RefCell<VecDeque<RT::Buf>>,
     /// Running counter of ack sequence number we have sent to peer.
     pub ack_seq_no: WatchedValue<SeqNumber>,
     /// Our sequence number based on how much data we have sent.
     pub recv_seq_no: WatchedValue<SeqNumber>,
+
+    /// Timeout for delayed ACKs.
+    ack_delay_timeout: Duration,
 
     pub ack_deadline: WatchedValue<Option<Instant>>,
 
@@ -58,13 +61,19 @@ pub struct Receiver<RT: Runtime> {
 }
 
 impl<RT: Runtime> Receiver<RT> {
-    pub fn new(seq_no: SeqNumber, max_window_size: u32, window_scale: u32) -> Self {
+    pub fn new(
+        seq_no: SeqNumber,
+        ack_delay_timeout: Duration,
+        max_window_size: u32,
+        window_scale: u32,
+    ) -> Self {
         Self {
             state: WatchedValue::new(ReceiverState::Open),
             base_seq_no: WatchedValue::new(seq_no),
             recv_queue: RefCell::new(VecDeque::with_capacity(RECV_QUEUE_SZ)),
             ack_seq_no: WatchedValue::new(seq_no),
             recv_seq_no: WatchedValue::new(seq_no),
+            ack_delay_timeout,
             ack_deadline: WatchedValue::new(None),
             max_window_size,
             window_scale,
@@ -214,9 +223,7 @@ impl<RT: Runtime> Receiver<RT> {
 
         // TODO: How do we handle when the other side is in PERSIST state here?
         if self.ack_deadline.get().is_none() {
-            // TODO: Configure this value (and also maybe just have an RT pointer here.)
-            self.ack_deadline
-                .set(Some(now + Duration::from_millis(500)));
+            self.ack_deadline.set(Some(now + self.ack_delay_timeout));
         }
 
         let new_recv_seq_no = self.recv_seq_no.get();
@@ -242,12 +249,16 @@ mod tests {
     use crate::fail::Fail;
     use crate::test_helpers::TestRuntime;
     use must_let::must_let;
-    use std::{num::Wrapping, time::Instant};
+    use std::{
+        num::Wrapping,
+        time::{Duration, Instant},
+    };
 
     #[test]
     fn test_out_of_order() {
         let now = Instant::now();
-        let receiver = Receiver::<TestRuntime>::new(Wrapping(0), 65536, 0);
+        let receiver =
+            Receiver::<TestRuntime>::new(Wrapping(0), Duration::from_millis(5), 65536, 0);
         let buf = BytesMut::zeroed(16).unwrap().freeze();
         must_let!(let Err(Fail::Ignored { .. }) = receiver.receive_data(Wrapping(16), buf.clone(), now));
         must_let!(let Ok(..) = receiver.receive_data(Wrapping(0), buf.clone(), now));
