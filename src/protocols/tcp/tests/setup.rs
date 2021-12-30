@@ -44,8 +44,8 @@ fn test_connection_timeout() {
 
     // Setup client.
     let mut client = test_helpers::new_alice2(now);
-    let nretries: usize = client.rt().tcp_options().handshake_retries;
-    let timeout: Duration = client.rt().tcp_options().handshake_timeout;
+    let nretries: usize = client.rt().tcp_options().handshake_retries();
+    let timeout: Duration = client.rt().tcp_options().handshake_timeout();
 
     // T(0) -> T(1)
     advance_clock(None, Some(&mut client), &mut now);
