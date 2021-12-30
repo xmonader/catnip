@@ -412,7 +412,7 @@ impl<RT: Runtime> Inner<RT> {
 
     fn receive(&mut self, ip_hdr: &Ipv4Header, buf: RT::Buf) -> Result<(), Fail> {
         let tcp_options = self.rt.tcp_options();
-        let (tcp_hdr, data) = TcpHeader::parse(ip_hdr, buf, tcp_options.rx_checksum_offload)?;
+        let (tcp_hdr, data) = TcpHeader::parse(ip_hdr, buf, tcp_options.rx_checksum_offload())?;
         debug!("TCP received {:?}", tcp_hdr);
         let local = ipv4::Endpoint::new(ip_hdr.dst_addr, tcp_hdr.dst_port);
         let remote = ipv4::Endpoint::new(ip_hdr.src_addr, tcp_hdr.src_port);
@@ -468,7 +468,7 @@ impl<RT: Runtime> Inner<RT> {
             ipv4_hdr: Ipv4Header::new(local.addr, remote.addr, Ipv4Protocol2::Tcp),
             tcp_hdr,
             data: RT::Buf::empty(),
-            tx_checksum_offload: self.rt.tcp_options().tx_checksum_offload,
+            tx_checksum_offload: self.rt.tcp_options().tx_checksum_offload(),
         };
         self.rt.transmit(segment);
 
