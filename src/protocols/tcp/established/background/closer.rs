@@ -30,7 +30,6 @@ async fn sender_ack_fin<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fail
         }
 
         // Send ACK segment for FIN.
-        cb.receiver.state.set(ReceiverState::AckdFin);
         let remote_link_addr = cb.arp.query(cb.remote.address()).await?;
         let mut header = cb.tcp_header();
 
@@ -39,6 +38,8 @@ async fn sender_ack_fin<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fail
         header.ack = true;
         header.ack_num = recv_seq + Wrapping(1);
         cb.emit(header, RT::Buf::empty(), remote_link_addr);
+
+        cb.receiver.state.set(ReceiverState::AckdFin);
     }
 }
 
