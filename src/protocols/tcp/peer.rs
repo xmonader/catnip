@@ -38,8 +38,14 @@ pub struct Peer<RT: Runtime> {
 
 impl<RT: Runtime> Peer<RT> {
     pub fn new(rt: RT, arp: arp::Peer<RT>, file_table: FileTable) -> Self {
-        let (tx, _rx) = mpsc::unbounded();
-        let inner = Rc::new(RefCell::new(Inner::new(rt.clone(), arp, file_table, tx)));
+        let (tx, rx) = mpsc::unbounded();
+        let inner = Rc::new(RefCell::new(Inner::new(
+            rt.clone(),
+            arp,
+            file_table,
+            tx,
+            rx,
+        )));
         Self { inner }
     }
 
@@ -395,6 +401,7 @@ impl<RT: Runtime> Inner<RT> {
         arp: arp::Peer<RT>,
         file_table: FileTable,
         dead_socket_tx: mpsc::UnboundedSender<FileDescriptor>,
+        _dead_socket_rx: mpsc::UnboundedReceiver<FileDescriptor>,
     ) -> Self {
         Self {
             isn_generator: IsnGenerator::new(rt.rng_gen()),
