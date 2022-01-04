@@ -69,6 +69,6 @@ impl<RT: Runtime> EstablishedSocket<RT> {
     }
 
     pub fn endpoints(&self) -> (ipv4::Endpoint, ipv4::Endpoint) {
-        (self.cb.local, self.cb.remote)
+        (self.cb.local(), self.cb.remote())
     }
 }

@@ -141,7 +141,7 @@ impl<RT: Runtime> Sender<RT> {
                 && win_sz >= in_flight_after_send
                 && effective_cwnd >= in_flight_after_send
             {
-                if let Some(remote_link_addr) = cb.arp.try_query(cb.remote.address()) {
+                if let Some(remote_link_addr) = cb.arp.try_query(cb.remote().address()) {
                     // This hook is primarily intended to record the last time we sent data, so we can later tell if the connection has been idle
 
                     self.congestion_ctrl.on_send(&self, sent_data);

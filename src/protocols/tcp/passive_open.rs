@@ -53,7 +53,7 @@ struct ReadySockets<RT: Runtime> {
 
 impl<RT: Runtime> ReadySockets<RT> {
     fn push_ok(&mut self, cb: ControlBlock<RT>) {
-        assert!(self.endpoints.insert(cb.remote));
+        assert!(self.endpoints.insert(cb.remote()));
         self.ready.push_back(Ok(cb));
         if let Some(w) = self.waker.take() {
             w.wake()
@@ -76,7 +76,7 @@ impl<RT: Runtime> ReadySockets<RT> {
             }
         };
         if let Ok(ref cb) = r {
-            assert!(self.endpoints.remove(&cb.remote));
+            assert!(self.endpoints.remove(&cb.remote()));
         }
         Poll::Ready(r)
     }
