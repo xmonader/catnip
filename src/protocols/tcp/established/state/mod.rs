@@ -38,6 +38,24 @@ pub struct ControlBlock<RT: Runtime> {
 }
 
 impl<RT: Runtime> ControlBlock<RT> {
+    pub fn new(
+        local: ipv4::Endpoint,
+        remote: ipv4::Endpoint,
+        rt: RT,
+        arp: arp::Peer<RT>,
+        sender: Sender<RT>,
+        receiver: Receiver<RT>,
+    ) -> Self {
+        Self {
+            local,
+            remote,
+            rt,
+            arp,
+            sender,
+            receiver,
+        }
+    }
+
     pub fn receive(&self, header: &TcpHeader, data: RT::Buf) {
         debug!("Receiving {} bytes + {:?}", data.len(), header);
         let now = self.rt.now();

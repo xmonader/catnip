@@ -191,14 +191,14 @@ impl<RT: Runtime> PassiveSocket<RT> {
                 local_window_scale,
             );
             self.inflight.remove(&remote);
-            let cb = ControlBlock {
-                local: self.local,
+            let cb = ControlBlock::new(
+                self.local,
                 remote,
-                rt: self.rt.clone(),
-                arp: self.arp.clone(),
+                self.rt.clone(),
+                self.arp.clone(),
                 sender,
                 receiver,
-            };
+            );
             self.ready.borrow_mut().push_ok(cb);
             return Ok(());
         }
