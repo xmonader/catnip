@@ -237,6 +237,53 @@ fn send_recv_round(
 
 //=============================================================================
 
+fn connection_hangup(
+    _ctx: &mut Context,
+    now: &mut Instant,
+    server: &mut Engine<TestRuntime>,
+    client: &mut Engine<TestRuntime>,
+    server_fd: FileDescriptor,
+    client_fd: FileDescriptor,
+) {
+    // Send FIN: Client -> Server
+    client.close(client_fd).unwrap();
+    client.rt().poll_scheduler();
+    let bytes: Bytes = client.rt().pop_frame();
+    advance_clock(Some(server), Some(client), now);
+
+    // ACK FIN: Server -> Client
+    server.receive(bytes).unwrap();
+    server.rt().poll_scheduler();
+    let bytes: Bytes = server.rt().pop_frame();
+    advance_clock(Some(server), Some(client), now);
+
+    // Receive ACK FIN
+    client.receive(bytes).unwrap();
+    advance_clock(Some(server), Some(client), now);
+
+    // Send FIN: Server -> Client
+    server.close(server_fd).unwrap();
+    server.rt().poll_scheduler();
+    let bytes: Bytes = server.rt().pop_frame();
+    advance_clock(Some(server), Some(client), now);
+
+    // ACK FIN: Client -> Server
+    client.receive(bytes).unwrap();
+    client.rt().poll_scheduler();
+    let bytes: Bytes = client.rt().pop_frame();
+    advance_clock(Some(server), Some(client), now);
+
+    // Receive ACK FIN
+    server.receive(bytes).unwrap();
+
+    advance_clock(Some(server), Some(client), now);
+
+    client.rt().poll_scheduler();
+    server.rt().poll_scheduler();
+}
+
+//=============================================================================
+
 /// Tests one way communication. This should force the receiving peer to send
 /// pure ACKs to the sender.
 #[test]
@@ -417,4 +464,38 @@ pub fn test_send_recv_with_delay() {
             recv_seq_no,
         );
     }
+}
+
+//=============================================================================
+
+#[test]
+fn test_connect_disconnect() {
+    let mut ctx = Context::from_waker(noop_waker_ref());
+    let mut now = Instant::now();
+
+    // Connection parameters
+    let listen_port: ip::Port = ip::Port::try_from(80).unwrap();
+    let listen_addr: ipv4::Endpoint = ipv4::Endpoint::new(test_helpers::BOB_IPV4, listen_port);
+
+    // Setup peers.
+    let mut server: Engine<TestRuntime> = test_helpers::new_bob2(now);
+    let mut client: Engine<TestRuntime> = test_helpers::new_alice2(now);
+
+    let (server_fd, client_fd): (FileDescriptor, FileDescriptor) = connection_setup(
+        &mut ctx,
+        &mut now,
+        &mut server,
+        &mut client,
+        listen_port,
+        listen_addr,
+    );
+
+    connection_hangup(
+        &mut ctx,
+        &mut now,
+        &mut server,
+        &mut client,
+        server_fd,
+        client_fd,
+    );
 }
