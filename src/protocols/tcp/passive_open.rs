@@ -1,11 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use super::{
-    constants::FALLBACK_MSS,
-    established::state::{receiver::Receiver, sender::Sender, ControlBlock},
-    isn_generator::IsnGenerator,
-};
+use super::{constants::FALLBACK_MSS, established::ControlBlock, isn_generator::IsnGenerator};
 use crate::{
     fail::Fail,
     protocols::{
@@ -53,7 +49,7 @@ struct ReadySockets<RT: Runtime> {
 
 impl<RT: Runtime> ReadySockets<RT> {
     fn push_ok(&mut self, cb: ControlBlock<RT>) {
-        assert!(self.endpoints.insert(cb.remote()));
+        assert!(self.endpoints.insert(cb.get_remote()));
         self.ready.push_back(Ok(cb));
         if let Some(w) = self.waker.take() {
             w.wake()
@@ -76,7 +72,7 @@ impl<RT: Runtime> ReadySockets<RT> {
             }
         };
         if let Ok(ref cb) = r {
-            assert!(self.endpoints.remove(&cb.remote()));
+            assert!(self.endpoints.remove(&cb.get_remote()));
         }
         Poll::Ready(r)
     }
@@ -176,28 +172,22 @@ impl<RT: Runtime> PassiveSocket<RT> {
                 local_window_scale, remote_window_scale
             );
 
-            let sender = Sender::new(
-                local_isn + Wrapping(1),
-                remote_window_size,
-                remote_window_scale,
-                mss,
-                tcp_options.congestion_ctrl_type(),
-                tcp_options.congestion_ctrl_options(),
-            );
-            let receiver = Receiver::new(
-                remote_isn + Wrapping(1),
-                self.rt.tcp_options().ack_delay_timeout(),
-                local_window_size,
-                local_window_scale,
-            );
             self.inflight.remove(&remote);
             let cb = ControlBlock::new(
                 self.local,
                 remote,
                 self.rt.clone(),
                 self.arp.clone(),
-                sender,
-                receiver,
+                remote_isn + Wrapping(1),
+                self.rt.tcp_options().ack_delay_timeout(),
+                local_window_size,
+                local_window_scale,
+                local_isn + Wrapping(1),
+                remote_window_size,
+                remote_window_scale,
+                mss,
+                tcp_options.congestion_ctrl_type(),
+                tcp_options.congestion_ctrl_options(),
             );
             self.ready.borrow_mut().push_ok(cb);
             return Ok(());

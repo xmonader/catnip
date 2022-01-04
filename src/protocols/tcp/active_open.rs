@@ -1,10 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use super::{
-    constants::FALLBACK_MSS,
-    established::state::{receiver::Receiver, sender::Sender, ControlBlock},
-};
+use super::{constants::FALLBACK_MSS, established::ControlBlock};
 use crate::{
     fail::Fail,
     protocols::{
@@ -199,27 +196,21 @@ impl<RT: Runtime> ActiveOpenSocket<RT> {
             local_window_scale, remote_window_scale
         );
 
-        let sender = Sender::new(
+        let cb = ControlBlock::new(
+            self.local,
+            self.remote,
+            self.rt.clone(),
+            self.arp.clone(),
+            remote_seq_num,
+            self.rt.tcp_options().ack_delay_timeout(),
+            rx_window_size,
+            local_window_scale,
             expected_seq,
             tx_window_size,
             remote_window_scale,
             mss,
             tcp_options.congestion_ctrl_type(),
             tcp_options.congestion_ctrl_options(),
-        );
-        let receiver = Receiver::new(
-            remote_seq_num,
-            self.rt.tcp_options().ack_delay_timeout(),
-            rx_window_size,
-            local_window_scale,
-        );
-        let cb = ControlBlock::new(
-            self.local,
-            self.remote,
-            self.rt.clone(),
-            self.arp.clone(),
-            sender,
-            receiver,
         );
         self.set_result(Ok(cb));
     }

@@ -10,7 +10,7 @@ use self::{
     acknowledger::acknowledger, closer::connection_terminated, retransmitter::retransmitter,
     sender::sender,
 };
-use super::state::ControlBlock;
+use super::{ControlBlock, State};
 use crate::{file_table::FileDescriptor, runtime::Runtime};
 use futures::channel::mpsc;
 use futures::FutureExt;

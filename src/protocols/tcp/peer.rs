@@ -132,11 +132,11 @@ impl<RT: Runtime> Peer<RT> {
         };
         let fd = inner.file_table.alloc(File::TcpSocket);
         let established = EstablishedSocket::new(cb, fd, inner.dead_socket_tx.clone());
-        let key = (established.cb.local(), established.cb.remote());
+        let key = (established.cb.get_local(), established.cb.get_remote());
 
         let socket = Socket::Established {
-            local: established.cb.local(),
-            remote: established.cb.remote(),
+            local: established.cb.get_local(),
+            remote: established.cb.get_remote(),
         };
         assert!(inner.sockets.insert(fd, socket).is_none());
         assert!(inner.established.insert(key, established).is_none());
@@ -189,25 +189,6 @@ impl<RT: Runtime> Peer<RT> {
             fd,
             state,
             inner: self.inner.clone(),
-        }
-    }
-
-    pub fn peek(&self, fd: FileDescriptor) -> Result<RT::Buf, Fail> {
-        let inner = self.inner.borrow_mut();
-        let key = match inner.sockets.get(&fd) {
-            Some(Socket::Established { local, remote }) => (*local, *remote),
-            Some(..) => {
-                return Err(Fail::Malformed {
-                    details: "Socket not established",
-                })
-            }
-            None => return Err(Fail::Malformed { details: "Bad FD" }),
-        };
-        match inner.established.get(&key) {
-            Some(ref s) => s.peek(),
-            None => Err(Fail::Malformed {
-                details: "Socket not established",
-            }),
         }
     }
 
