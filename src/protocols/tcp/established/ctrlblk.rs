@@ -371,7 +371,7 @@ impl<RT: Runtime> ControlBlock<RT> {
         self.sender.remote_mss()
     }
 
-    pub fn current_rto(&self) -> Duration {
+    pub fn rto_current(&self) -> Duration {
         self.sender.current_rto()
     }
 }

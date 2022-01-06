@@ -67,7 +67,7 @@ impl<RT: Runtime> EstablishedSocket<RT> {
     }
 
     pub fn current_rto(&self) -> Duration {
-        self.cb.current_rto()
+        self.cb.rto_current()
     }
 
     pub fn endpoints(&self) -> (ipv4::Endpoint, ipv4::Endpoint) {
