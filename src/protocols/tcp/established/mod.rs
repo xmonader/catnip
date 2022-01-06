@@ -3,7 +3,6 @@
 
 mod background;
 mod ctrlblk;
-mod receiver;
 mod sender;
 
 pub use self::ctrlblk::ControlBlock;
