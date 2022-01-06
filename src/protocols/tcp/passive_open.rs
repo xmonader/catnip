@@ -53,7 +53,7 @@ struct ReadySockets<RT: Runtime> {
 
 impl<RT: Runtime> ReadySockets<RT> {
     fn push_ok(&mut self, cb: ControlBlock<RT>) {
-        assert!(self.endpoints.insert(cb.remote));
+        assert!(self.endpoints.insert(cb.remote()));
         self.ready.push_back(Ok(cb));
         if let Some(w) = self.waker.take() {
             w.wake()
@@ -76,7 +76,7 @@ impl<RT: Runtime> ReadySockets<RT> {
             }
         };
         if let Ok(ref cb) = r {
-            assert!(self.endpoints.remove(&cb.remote));
+            assert!(self.endpoints.remove(&cb.remote()));
         }
         Poll::Ready(r)
     }
@@ -191,14 +191,14 @@ impl<RT: Runtime> PassiveSocket<RT> {
                 local_window_scale,
             );
             self.inflight.remove(&remote);
-            let cb = ControlBlock {
-                local: self.local,
+            let cb = ControlBlock::new(
+                self.local,
                 remote,
-                rt: self.rt.clone(),
-                arp: self.arp.clone(),
+                self.rt.clone(),
+                self.arp.clone(),
                 sender,
                 receiver,
-            };
+            );
             self.ready.borrow_mut().push_ok(cb);
             return Ok(());
         }

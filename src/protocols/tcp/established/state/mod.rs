@@ -25,8 +25,8 @@ use std::time::Duration;
 
 /// Transmission control block for representing our TCP connection.
 pub struct ControlBlock<RT: Runtime> {
-    pub local: ipv4::Endpoint,
-    pub remote: ipv4::Endpoint,
+    local: ipv4::Endpoint,
+    remote: ipv4::Endpoint,
 
     pub rt: RT,
     pub arp: arp::Peer<RT>,
@@ -38,6 +38,32 @@ pub struct ControlBlock<RT: Runtime> {
 }
 
 impl<RT: Runtime> ControlBlock<RT> {
+    pub fn new(
+        local: ipv4::Endpoint,
+        remote: ipv4::Endpoint,
+        rt: RT,
+        arp: arp::Peer<RT>,
+        sender: Sender<RT>,
+        receiver: Receiver<RT>,
+    ) -> Self {
+        Self {
+            local,
+            remote,
+            rt,
+            arp,
+            sender,
+            receiver,
+        }
+    }
+
+    pub fn local(&self) -> ipv4::Endpoint {
+        self.local
+    }
+
+    pub fn remote(&self) -> ipv4::Endpoint {
+        self.remote
+    }
+
     pub fn receive(&self, header: &TcpHeader, data: RT::Buf) {
         debug!("Receiving {} bytes + {:?}", data.len(), header);
         let now = self.rt.now();

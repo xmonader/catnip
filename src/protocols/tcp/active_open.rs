@@ -213,14 +213,14 @@ impl<RT: Runtime> ActiveOpenSocket<RT> {
             rx_window_size,
             local_window_scale,
         );
-        let cb = ControlBlock {
-            local: self.local,
-            remote: self.remote,
-            rt: self.rt.clone(),
-            arp: self.arp.clone(),
+        let cb = ControlBlock::new(
+            self.local,
+            self.remote,
+            self.rt.clone(),
+            self.arp.clone(),
             sender,
             receiver,
-        };
+        );
         self.set_result(Ok(cb));
     }
 

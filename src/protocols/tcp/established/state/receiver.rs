@@ -118,7 +118,7 @@ impl<RT: Runtime> Receiver<RT> {
     pub fn update_ack_sent(&self, ack_seq: SeqNumber) {
         // FINs are special. Even though we don't receive any data, our ACK should be + 1 the
         // seq we received.
-        if self.state.get() == ReceiverState::AckdFin {
+        if self.state.get() == ReceiverState::ReceivedFin {
             assert_eq!(ack_seq, self.recv_seq_no.get() + Wrapping(1));
         } else {
             assert_eq!(ack_seq, self.recv_seq_no.get());

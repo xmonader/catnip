@@ -30,8 +30,7 @@ async fn sender_ack_fin<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fail
         }
 
         // Send ACK segment for FIN.
-        cb.receiver.state.set(ReceiverState::AckdFin);
-        let remote_link_addr = cb.arp.query(cb.remote.address()).await?;
+        let remote_link_addr = cb.arp.query(cb.remote().address()).await?;
         let mut header = cb.tcp_header();
 
         // ACK replies to FIN are special as their ack sequence number should be set to +1 the
@@ -39,6 +38,8 @@ async fn sender_ack_fin<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fail
         header.ack = true;
         header.ack_num = recv_seq + Wrapping(1);
         cb.emit(header, RT::Buf::empty(), remote_link_addr);
+
+        cb.receiver.state.set(ReceiverState::AckdFin);
     }
 }
 
@@ -64,7 +65,7 @@ async fn sender_send_fin<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fai
                 }
 
                 // TODO: When do we retransmit this?
-                let remote_link_addr = cb.arp.query(cb.remote.address()).await?;
+                let remote_link_addr = cb.arp.query(cb.remote().address()).await?;
                 let mut header = cb.tcp_header();
                 header.seq_num = sent_seq;
                 header.fin = true;
@@ -73,7 +74,7 @@ async fn sender_send_fin<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fai
                 cb.sender.state.set(SenderState::SentFin);
             }
             SenderState::Reset => {
-                let remote_link_addr = cb.arp.query(cb.remote.address()).await?;
+                let remote_link_addr = cb.arp.query(cb.remote().address()).await?;
                 let mut header = cb.tcp_header();
                 header.rst = true;
                 cb.emit(header, RT::Buf::empty(), remote_link_addr);
