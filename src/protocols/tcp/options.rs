@@ -4,9 +4,7 @@
 use crate::{
     protocols::tcp::{
         constants::{DEFAULT_MSS, MAX_MSS, MIN_MSS},
-        established::state::congestion_ctrl::{
-            self as cc, CongestionControl, CongestionControlConstructor,
-        },
+        established::cc::{self, CongestionControl, CongestionControlConstructor},
     },
     runtime::Runtime,
 };
