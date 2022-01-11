@@ -91,7 +91,7 @@ impl Ipv4Header {
             identification: 0,
             flags: 0,
             fragment_offset: 0,
-            time_to_live: 0,
+            time_to_live: DEFAULT_IPV4_TTL,
             protocol,
             src_addr,
             dst_addr,
