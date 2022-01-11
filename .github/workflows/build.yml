@@ -9,7 +9,27 @@ on:
       - bugfix-*
       - enhancement-*
       - feature-*
+      - dev
+      - unstable
+      - master
+  pull_request:
+    branches:
+      - bugfix-*
+      - enhancement-*
+      - feature-*
       - workaround-*
+      - dev
+      - unstable
+      - master
+  workflow_dispatch:
+    branches:
+      - bugfix-*
+      - enhancement-*
+      - feature-*
+      - workaround-*
+      - dev
+      - unstable
+      - master
 
 env:
   CARGO_TERM_COLOR: always
