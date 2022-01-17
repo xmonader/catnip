@@ -35,9 +35,19 @@ use std::{
     time::{Duration, Instant},
 };
 
+// TODO: Review this value (and its purpose).  It (2048 segments) of 8 KB jumbo packets would limit the unread data to
+// just 16 MB.  If we don't want to lie, that is also about the max window size we should ever advertise.  Whereas TCP
+// with the window scale option allows for window sizes of up to 1 GB.  This value appears to exist more because of the
+// mechanism used to manage the receive queue (a VecDeque) than anything else.
 const RECV_QUEUE_SZ: usize = 2048;
+
+// TODO: Review this value (and its purpose).  It (16 segments) seems awfully small (would make fast retransmit less
+// useful), and this mechanism isn't the best way to protect ourselves against deliberate out-of-order segment attacks.
+// Ideally, we'd limit out-of-order data to that which (along with the unread data) will fit in the receive window.
 const MAX_OUT_OF_ORDER: usize = 16;
 
+// TODO: Review this.  The TCP Specification doesn't have states called ActiveClose, FinWait3, Closing2, TimeWait2,
+// PassiveClose, CloseWait2 or Reset.  And it has states Listen, SynReceived, and SynSent, which aren't listed here.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum State {
     Established,
@@ -58,6 +68,12 @@ pub enum State {
 }
 
 struct ReceiveQueue<RT: Runtime> {
+    // TODO: This diagram appears to be wrong.  It doesn't appear to reflect how the code is currently written, and it
+    // certainly doesn't reflect how the code should be written.  See RFC 793, Figure 5 for what this should look like.
+    // Instead of base_seq_no, ack_seq_no, and recv_seq_no, we should just be tracking RCV.NXT and how much unread data
+    // there is in the receive queue (the latter is used to calculate the receive window to advertise).
+    //
+    //
     //                     |-----------------recv_window-------------------|
     //                base_seq_no             ack_seq_no             recv_seq_no
     //                     v                       v                       v
@@ -69,9 +85,21 @@ struct ReceiveQueue<RT: Runtime> {
     // an ACK. The sender, however, will still be computing the receive window relative to the
     // the old `ack_seq_no` until we send them an ACK (see the diagram in sender.rs).
     //
+
+    // TODO: Figure out what this "base_seq_no" is supposed to reflect.
     pub base_seq_no: WatchedValue<SeqNumber>,
+
+    // Running counter of ack sequence number we have sent to peer.
+    // TODO: In RFC 793 terms, this appears to be RCV.NXT.  Probably should rename to rcv_nxt or something.
     pub ack_seq_no: WatchedValue<SeqNumber>,
+
+    // Our sequence number based on how much data we have sent.
+    // TODO: Fix above comment, as it is clearly wrong.  It has nothing to do with how much data we have sent.  From
+    // the above ASCII-art diagram, this sequence number is RCV.NXT + RCV.WND?  However, the receive_data function
+    // below behaves as if this sequence number *is* RCV.NXT.
     pub recv_seq_no: WatchedValue<SeqNumber>,
+
+    // Receive queue.  Contains in-order received (and acknowledged) data ready for the application to read.
     recv_queue: RefCell<VecDeque<RT::Buf>>,
 }
 
@@ -100,6 +128,9 @@ impl<RT: Runtime> ReceiveQueue<RT> {
             .modify(|r| r + SeqNumber::from(buf_len as u32));
     }
 
+    // TODO: This appears to add up all the bytes ready for reading in the recv_queue, and is called each time we get a
+    // new segment.  Seems like it would be more efficient to keep a running count of the bytes in the queue that we
+    // add/subtract from as we add/remove segments from the queue.
     pub fn size(&self) -> usize {
         self.recv_queue
             .borrow()
@@ -122,18 +153,6 @@ pub struct ControlBlock<RT: Runtime> {
 
     state: WatchedValue<State>,
 
-    //                     |-----------------recv_window-------------------|
-    //                base_seq_no             ack_seq_no             recv_seq_no
-    //                     v                       v                       v
-    // ... ----------------|-----------------------|-----------------------| (unavailable)
-    //         received           acknowledged           unacknowledged
-    //
-    // NB: We can have `ack_seq_no < base_seq_no` when the application fully drains the receive
-    // buffer before we've sent a pure ACK or transmitted some data on which we could piggyback
-    // an ACK. The sender, however, will still be computing the receive window relative to the
-    // the old `ack_seq_no` until we send them an ACK (see the diagram in sender.rs).
-    //
-    /// Timeout for delayed ACKs.
     ack_delay_timeout: Duration,
 
     ack_deadline: WatchedValue<Option<Instant>>,
@@ -363,6 +382,7 @@ impl<RT: Runtime> ControlBlock<RT> {
         }
         if !data.is_empty() {
             if self.state.get() != State::Established {
+                // TODO: Review this warning.  TCP connections in FIN_WAIT_1 and FIN_WAIT_2 can still receive data.
                 warn!("Receiver closed");
             }
             if let Err(e) = self.receive_data(header.seq_num, data, now) {
@@ -388,6 +408,8 @@ impl<RT: Runtime> ControlBlock<RT> {
 
         // Check if we have acknowledged all bytes that we have received. If not, piggy back an ACK
         // on this message.
+        // TODO: This is a bug (or two).  Except for an active open SYN where we don't yet have a remote sequence
+        // number to acknowledge, we should *always* ACK.
         if self.state.get() != State::CloseWait2 {
             if let Some(ack_seq_no) = self.current_ack() {
                 header.ack_num = ack_seq_no;
@@ -473,12 +495,16 @@ impl<RT: Runtime> ControlBlock<RT> {
     /// Returns the ack sequence number to use for the next packet based on all the bytes we have
     /// received. This ack sequence number will be piggy backed on the next packet send.
     /// If all received bytes have been acknowledged returns None.
+    /// TODO: Again, we should *always* ACK.  So this should always return the current acknowledgement sequence number.
     pub fn current_ack(&self) -> Option<SeqNumber> {
         let ack_seq_no = self.receive_queue.ack_seq_no.get();
         let recv_seq_no = self.receive_queue.recv_seq_no.get();
 
         // It is okay if ack_seq_no is greater than the seq number. This can happen when we have
         // ACKed a FIN so our ACK number is +1 greater than our seq number.
+        // TODO: The above comment is confusing, ambiguous, and likely also wrong.  FINs consume sequence number space,
+        // so we should be including them in our record keeping of the sequence number space received from our peer.
+        // Update: There should only be one value involved/returned here, the one equivalent to RCV.NXT.
         if ack_seq_no == recv_seq_no {
             None
         } else {

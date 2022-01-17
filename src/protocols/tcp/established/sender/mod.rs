@@ -267,6 +267,7 @@ impl<RT: Runtime> Sender<RT> {
         let new_base_seq_no = self.base_seq_no.get();
         if new_base_seq_no < base_seq_no {
             // We've wrapped around, and so we need to do some bookkeeping
+            // ToDo: Figure out what this is doing -- it's probably wrong.
             self.congestion_ctrl.on_base_seq_no_wraparound();
         }
 
