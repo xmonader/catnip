@@ -500,54 +500,131 @@ impl<RT: Runtime> ControlBlock<RT> {
         Poll::Ready(Ok(segment))
     }
 
+    // TODO: Improve following comment:
+    // This routine appears to take an incoming TCP segment and either add it to the receiver's queue of data that is
+    // ready to be read by the user (if the segment contains in-order data) or add it to the proper position in the
+    // receiver's store of out-of-order data.  Also, in the in-order case, it updates our receiver's sequence number
+    // corresponding to the minumum number allowed for new reception (RCV.NXT in RFC 793 terms).
+    //
     pub fn receive_data(&self, seq_no: SeqNumber, buf: RT::Buf, now: Instant) -> Result<(), Fail> {
         let recv_seq_no = self.receive_queue.recv_seq_no.get();
+
         if seq_no > recv_seq_no {
+            // This new segment comes after what we're expecting (i.e. the new segment arrived out-of-order).
             let mut out_of_order = self.out_of_order.borrow_mut();
-            if !out_of_order.contains_key(&seq_no) {
-                while out_of_order.len() > MAX_OUT_OF_ORDER {
-                    let (&key, _) = out_of_order.iter().rev().next().unwrap();
-                    out_of_order.remove(&key);
+
+            // Check if the new data segment's starting sequence number is already in the out-of-order store.
+            // TODO: We should check if any part of the new segment contains new data, and not just the start.
+            for stored_segment in out_of_order.iter() {
+                if stored_segment.0 == seq_no {
+                    // Drop this segment as a duplicate.
+                    // TODO: We should ACK when we drop a segment.
+                    return Err(Fail::Ignored {
+                        details: "Out of order segment (duplicate)",
+                    });
                 }
-                out_of_order.insert(seq_no, buf);
-                return Err(Fail::Ignored {
-                    details: "Out of order segment (reordered)",
-                });
             }
+
+            // Before adding more, if the out-of-order store contains too many entries, delete the later entries.
+            while out_of_order.len() > MAX_OUT_OF_ORDER {
+                out_of_order.pop_back();
+            }
+
+            // Add the new segment to the out-of-order store (the store is sorted by starting sequence number).
+            let mut insert_index = out_of_order.len();
+            for index in 0..out_of_order.len() {
+                if seq_no > out_of_order[index].0 {
+                    insert_index = index;
+                    break;
+                }
+            }
+            if insert_index < out_of_order.len() {
+                out_of_order[insert_index] = (seq_no, buf);
+            } else {
+                out_of_order.push_back((seq_no, buf));
+            }
+
+            // TODO: There is a bug here.  We should send an ACK when we drop a segment.
+            return Err(Fail::Ignored {
+                details: "Out of order segment (reordered)",
+            });
         }
+
+        // Check if we've already received this data (i.e. new segment contains duplicate data).
+        // TODO: There is a bug here.  The new segment could contain both old *and* new data.  Current code throws it
+        // all away.  We need to check if any part of the new segment falls within our receive window.
         if seq_no < recv_seq_no {
+            // TODO: There is a bug here.  We should send an ACK if we drop the segment.
             return Err(Fail::Ignored {
                 details: "Out of order segment (duplicate)",
             });
         }
 
+        // If we get here, the new segment begins with the sequence number we're expecting.
+        // TODO: Since this is the "good" case, we should have a fast-path check for it first above, instead of falling
+        // through to it (performance improvement).
+
         let unread_bytes: usize = self.receive_queue.size();
+
+        // This appears to drop segments if their total contents would exceed the receive window.
+        // TODO: There is a bug here.  The segment could also contain some data that fits within the window.  We should
+        // still accept the data that fits within the window.
+        // TODO: We should restructure this to convert usize things to known (fixed) sizes, not the other way around.
         if unread_bytes + buf.len() > self.max_window_size as usize {
+            // TODO: There is a bug here.  We should send an ACK if we drop the segment.
             return Err(Fail::Ignored {
                 details: "Full receive window",
             });
         }
 
+        // Push the new segment data onto the end of the receive queue.
+        let mut recv_seq_no = recv_seq_no + SeqNumber::from(buf.len() as u32);
         self.receive_queue.push(buf);
+
+        // Okay, we've successfully received some new data.  Check if any of the formerly out-of-order data waiting in
+        // the out-of-order queue is now in-order.  If so, we can move it to the receive queue.
+        let mut out_of_order = self.out_of_order.borrow_mut();
+        while !out_of_order.is_empty() {
+            if let Some(stored_entry) = out_of_order.front() {
+                if stored_entry.0 == recv_seq_no {
+                    // Move this entry's buffer from the out-of-order store to the receive queue.
+                    // This data is now considered to be "received" by TCP, and included in our RCV.NXT calculation.
+                    info!("Recovering out-of-order packet at {}", recv_seq_no);
+                    if let Some(temp) = out_of_order.pop_front() {
+                        recv_seq_no = recv_seq_no + SeqNumber::from(temp.1.len() as u32);
+                        self.receive_queue.push(temp.1);
+                    }
+                } else {
+                    // Since our out-of-order list is sorted, we can stop when the next segment is not in sequence.
+                    break;
+                }
+            }
+        }
+
+        // TODO: Review recent change to update control block copy of recv_seq_no upon each push to the receive_queue.
+        // When receiving a retransmitted segment that fills a "hole" in the receive space, thus allowing a number
+        // (potentially large number) of out-of-order segments to be added, we'll be modifying the TCB copy of the
+        // recv_seq_no many times.  Since this potentially wakes a waker, we might want to wait until we've added all
+        // the segments before we update the value.
+        // Anyhow that recent change removes the need for the following two lines:
+        // Update our receive sequence number (i.e. RCV_NXT) appropriately.
+        // self.recv_seq_no.set(recv_seq_no);
+
+        // This appears to be checking if something is waiting on this Receiver, and if so, wakes that thing up.
+        // TODO: Verify that this is the right place and time to do this.
         if let Some(w) = self.waker.borrow_mut().take() {
             w.wake()
         }
 
         // TODO: How do we handle when the other side is in PERSIST state here?
+        // TODO: Fix above comment - there is no such thing as a PERSIST state in TCP.  Presumably, this comment means
+        // to ask "how do we handle the situation where the other side is sending us zero window probes because it has
+        // data to send and no open window to send into?".  The answer is: we should ACK zero-window probes.
+
+        // Schedule an ACK for this receive (if one isn't already).
+        // TODO: Another bug.  If the delayed ACK timer is already running, we should cancel it and ACK immediately.
         if self.ack_deadline.get().is_none() {
             self.ack_deadline.set(Some(now + self.ack_delay_timeout));
-        }
-
-        let new_recv_seq_no = self.receive_queue.recv_seq_no.get();
-        let old_data = {
-            let mut out_of_order = self.out_of_order.borrow_mut();
-            out_of_order.remove(&new_recv_seq_no)
-        };
-        if let Some(old_data) = old_data {
-            info!("Recovering out-of-order packet at {}", new_recv_seq_no);
-            if let Err(e) = self.receive_data(new_recv_seq_no, old_data, now) {
-                info!("Failed to recover out-of-order packet: {:?}", e);
-            }
         }
 
         Ok(())
