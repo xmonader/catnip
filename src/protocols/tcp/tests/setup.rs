@@ -13,6 +13,7 @@ use crate::{
         tcp::{
             operations::{AcceptFuture, ConnectFuture},
             segment::{TcpHeader, TcpSegment},
+            SeqNumber,
         },
     },
     runtime::{PacketBuf, Runtime, RuntimeBuf},
@@ -24,7 +25,6 @@ use std::{
     convert::TryFrom,
     future::Future,
     net::Ipv4Addr,
-    num::Wrapping,
     pin::Pin,
     task::{Context, Poll},
     time::{Duration, Instant},
@@ -379,7 +379,7 @@ fn check_packet_pure_syn(
     assert_eq!(ipv4_header.dst_addr, ipv4_dst_addr);
     let (tcp_header, _) = TcpHeader::parse(&ipv4_header, ipv4_payload, false).unwrap();
     assert_eq!(tcp_header.dst_port, dst_port);
-    assert_eq!(tcp_header.seq_num, Wrapping(0));
+    assert_eq!(tcp_header.seq_num, SeqNumber::from(0));
     assert_eq!(tcp_header.syn, true);
 }
 
@@ -402,8 +402,8 @@ fn check_packet_syn_ack(
     assert_eq!(ipv4_header.dst_addr, ipv4_dst_addr);
     let (tcp_header, _) = TcpHeader::parse(&ipv4_header, ipv4_payload, false).unwrap();
     assert_eq!(tcp_header.src_port, src_port);
-    assert_eq!(tcp_header.ack_num, Wrapping(1));
-    assert_eq!(tcp_header.seq_num, Wrapping(0));
+    assert_eq!(tcp_header.ack_num, SeqNumber::from(1));
+    assert_eq!(tcp_header.seq_num, SeqNumber::from(0));
     assert_eq!(tcp_header.syn, true);
     assert_eq!(tcp_header.ack, true);
 }
@@ -428,8 +428,8 @@ fn check_packet_pure_ack_on_syn_ack(
     assert_eq!(ipv4_header.dst_addr, ipv4_dst_addr);
     let (tcp_header, _) = TcpHeader::parse(&ipv4_header, ipv4_payload, false).unwrap();
     assert_eq!(tcp_header.dst_port, dst_port);
-    assert_eq!(tcp_header.seq_num, Wrapping(1));
-    assert_eq!(tcp_header.ack_num, Wrapping(1));
+    assert_eq!(tcp_header.seq_num, SeqNumber::from(1));
+    assert_eq!(tcp_header.ack_num, SeqNumber::from(1));
     assert_eq!(tcp_header.ack, true);
 }
 

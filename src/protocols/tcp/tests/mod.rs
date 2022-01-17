@@ -4,14 +4,14 @@
 pub mod established;
 pub mod setup;
 
-use std::{net::Ipv4Addr, num::Wrapping};
+use std::{net::Ipv4Addr};
 
 use crate::{
     collections::bytes::Bytes,
     protocols::{
         ethernet2::{EtherType2, Ethernet2Header, MacAddress},
         ipv4::Ipv4Header,
-        tcp::segment::TcpHeader,
+        tcp::{segment::TcpHeader, SeqNumber},
     },
 };
 
@@ -25,8 +25,8 @@ pub fn check_packet_data(
     ipv4_src_addr: Ipv4Addr,
     ipv4_dst_addr: Ipv4Addr,
     window_size: u16,
-    seq_num: Wrapping<u32>,
-    ack_num: Option<Wrapping<u32>>,
+    seq_num: SeqNumber,
+    ack_num: Option<SeqNumber>,
 ) -> usize {
     let (eth2_header, eth2_payload) = Ethernet2Header::parse(bytes).unwrap();
     assert_eq!(eth2_header.src_addr, eth2_src_addr);
@@ -57,7 +57,7 @@ pub fn check_packet_pure_ack(
     ipv4_src_addr: Ipv4Addr,
     ipv4_dst_addr: Ipv4Addr,
     window_size: u16,
-    ack_num: Wrapping<u32>,
+    ack_num: SeqNumber,
 ) {
     let (eth2_header, eth2_payload) = Ethernet2Header::parse(bytes).unwrap();
     assert_eq!(eth2_header.src_addr, eth2_src_addr);
@@ -69,7 +69,7 @@ pub fn check_packet_pure_ack(
     let (tcp_header, tcp_payload) = TcpHeader::parse(&ipv4_header, ipv4_payload, false).unwrap();
     assert_eq!(tcp_payload.len(), 0);
     assert_eq!(tcp_header.window_size, window_size);
-    assert_eq!(tcp_header.seq_num, Wrapping(0));
+    assert_eq!(tcp_header.seq_num, SeqNumber::from(0));
     assert_eq!(tcp_header.ack, true);
     assert_eq!(tcp_header.ack_num, ack_num);
 }
