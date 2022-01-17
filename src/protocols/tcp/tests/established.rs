@@ -14,6 +14,7 @@ use crate::{
                 check_packet_data, check_packet_pure_ack,
                 setup::{advance_clock, connection_setup},
             },
+            SeqNumber,
         },
     },
     runtime::Runtime,
@@ -26,8 +27,6 @@ use std::{
     collections::VecDeque,
     convert::TryFrom,
     future::Future,
-    num::Wrapping,
-    ops::Add,
     pin::Pin,
     task::{Context, Poll},
     time::Instant,
@@ -53,8 +52,8 @@ fn send_data(
     sender: &mut Engine<TestRuntime>,
     sender_fd: FileDescriptor,
     window_size: u16,
-    seq_no: Wrapping<u32>,
-    ack_num: Option<Wrapping<u32>>,
+    seq_no: SeqNumber,
+    ack_num: Option<SeqNumber>,
     bytes: Bytes,
 ) -> (Bytes, usize) {
     trace!(
@@ -120,7 +119,7 @@ fn recv_pure_ack(
     sender: &mut Engine<TestRuntime>,
     receiver: &mut Engine<TestRuntime>,
     window_size: u16,
-    seq_no: Wrapping<u32>,
+    seq_no: SeqNumber,
 ) {
     trace!(
         "====> ack: {:?} -> {:?}",
@@ -157,7 +156,7 @@ fn send_recv(
     server_fd: FileDescriptor,
     client_fd: FileDescriptor,
     window_size: u16,
-    seq_no: Wrapping<u32>,
+    seq_no: SeqNumber,
     bytes: Bytes,
 ) {
     let bufsize: usize = bytes.len();
@@ -184,7 +183,7 @@ fn send_recv(
         server,
         client,
         window_size,
-        seq_no.add(Wrapping(bufsize as u32)),
+        seq_no + SeqNumber::from(bufsize as u32),
     );
 }
 
@@ -198,7 +197,7 @@ fn send_recv_round(
     server_fd: FileDescriptor,
     client_fd: FileDescriptor,
     window_size: u16,
-    seq_no: Wrapping<u32>,
+    seq_no: SeqNumber,
     bytes: Bytes,
 ) {
     // Push Data: Client -> Server
@@ -227,7 +226,7 @@ fn send_recv_round(
         server_fd,
         window_size,
         seq_no,
-        Some(seq_no.add(Wrapping(bufsize as u32))),
+        Some(seq_no + SeqNumber::from(bufsize as u32)),
         bytes.clone(),
     );
 
@@ -324,7 +323,7 @@ pub fn test_send_recv_loop() {
             server_fd,
             client_fd,
             max_window_size as u16,
-            Wrapping(1 + i * bufsize),
+            SeqNumber::from(1 + i * bufsize),
             buf.clone(),
         );
     }
@@ -370,7 +369,7 @@ pub fn test_send_recv_round_loop() {
             server_fd,
             client_fd,
             max_window_size as u16,
-            Wrapping(1 + i * bufsize),
+            SeqNumber::from(1 + i * bufsize),
             buf.clone(),
         );
     }
@@ -409,8 +408,8 @@ pub fn test_send_recv_with_delay() {
 
     let bufsize: u32 = 64;
     let buf: Bytes = cook_buffer(bufsize as usize, None);
-    let mut recv_seq_no: Wrapping<u32> = Wrapping(1);
-    let mut seq_no: Wrapping<u32> = Wrapping(1);
+    let mut recv_seq_no: SeqNumber = SeqNumber::from(1);
+    let mut seq_no: SeqNumber = SeqNumber::from(1);
     let mut inflight = VecDeque::<Bytes>::new();
 
     for _ in 0..((max_window_size + 1) / bufsize) {
@@ -427,7 +426,7 @@ pub fn test_send_recv_with_delay() {
             buf.clone(),
         );
 
-        seq_no = seq_no.add(Wrapping(bufsize));
+        seq_no = seq_no + SeqNumber::from(bufsize);
 
         inflight.push_back(bytes);
 
@@ -435,7 +434,7 @@ pub fn test_send_recv_with_delay() {
         if rand::random() {
             if let Some(bytes) = inflight.pop_front() {
                 recv_data(&mut ctx, &mut server, &mut client, server_fd, bytes.clone());
-                recv_seq_no = recv_seq_no.add(Wrapping(bufsize as u32));
+                recv_seq_no = recv_seq_no + SeqNumber::from(bufsize as u32);
             }
         }
 
@@ -453,7 +452,7 @@ pub fn test_send_recv_with_delay() {
     while let Some(bytes) = inflight.pop_front() {
         // Pop data.
         recv_data(&mut ctx, &mut server, &mut client, server_fd, bytes.clone());
-        recv_seq_no = recv_seq_no.add(Wrapping(bufsize as u32));
+        recv_seq_no = recv_seq_no + SeqNumber::from(bufsize as u32);
 
         // Send pure ack.
         recv_pure_ack(
