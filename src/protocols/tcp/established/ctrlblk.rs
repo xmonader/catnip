@@ -25,11 +25,11 @@ use crate::{
     },
     runtime::Runtime,
 };
+
 use std::{
     cell::RefCell,
-    collections::{BTreeMap, VecDeque},
+    collections::VecDeque,
     convert::TryInto,
-    num::Wrapping,
     rc::Rc,
     task::{Context, Poll, Waker},
     time::{Duration, Instant},
@@ -87,7 +87,8 @@ impl<RT: Runtime> ReceiveQueue<RT> {
 
     pub fn pop(&self) -> Option<RT::Buf> {
         let buf: RT::Buf = self.recv_queue.borrow_mut().pop_front()?;
-        self.base_seq_no.modify(|b| b + Wrapping(buf.len() as u32));
+        self.base_seq_no
+            .modify(|b| b + SeqNumber::from(buf.len() as u32));
 
         Some(buf)
     }
@@ -95,7 +96,8 @@ impl<RT: Runtime> ReceiveQueue<RT> {
     pub fn push(&self, buf: RT::Buf) {
         let buf_len: u32 = buf.len() as u32;
         self.recv_queue.borrow_mut().push_back(buf);
-        self.recv_seq_no.modify(|r| r + Wrapping(buf_len as u32));
+        self.recv_seq_no
+            .modify(|r| r + SeqNumber::from(buf_len as u32));
     }
 
     pub fn size(&self) -> usize {
@@ -140,7 +142,7 @@ pub struct ControlBlock<RT: Runtime> {
     window_scale: u32,
 
     waker: RefCell<Option<Waker>>,
-    out_of_order: RefCell<BTreeMap<SeqNumber, RT::Buf>>,
+    out_of_order: RefCell<VecDeque<(SeqNumber, RT::Buf)>>,
 
     receive_queue: ReceiveQueue<RT>,
 }
@@ -184,7 +186,7 @@ impl<RT: Runtime> ControlBlock<RT> {
             max_window_size: receiver_window_size,
             window_scale: receiver_window_scale,
             waker: RefCell::new(None),
-            out_of_order: RefCell::new(BTreeMap::new()),
+            out_of_order: RefCell::new(VecDeque::new()),
             receive_queue: ReceiveQueue::new(receiver_seq_no, receiver_seq_no, receiver_seq_no),
         }
     }
@@ -231,7 +233,7 @@ impl<RT: Runtime> ControlBlock<RT> {
         self.sender.congestion_ctrl_on_fast_retransmit()
     }
 
-    pub fn congestion_ctrl_on_rto(&self, base_seq_no: Wrapping<u32>) {
+    pub fn congestion_ctrl_on_rto(&self, base_seq_no: SeqNumber) {
         self.sender.congestion_ctrl_on_rto(base_seq_no)
     }
 
@@ -260,19 +262,19 @@ impl<RT: Runtime> ControlBlock<RT> {
         self.sender.get_window_size()
     }
 
-    pub fn get_base_seq_no(&self) -> (Wrapping<u32>, WatchFuture<Wrapping<u32>>) {
+    pub fn get_base_seq_no(&self) -> (SeqNumber, WatchFuture<SeqNumber>) {
         self.sender.get_base_seq_no()
     }
 
-    pub fn get_unsent_seq_no(&self) -> (Wrapping<u32>, WatchFuture<Wrapping<u32>>) {
+    pub fn get_unsent_seq_no(&self) -> (SeqNumber, WatchFuture<SeqNumber>) {
         self.sender.get_unsent_seq_no()
     }
 
-    pub fn get_sent_seq_no(&self) -> (Wrapping<u32>, WatchFuture<Wrapping<u32>>) {
+    pub fn get_sent_seq_no(&self) -> (SeqNumber, WatchFuture<SeqNumber>) {
         self.sender.get_sent_seq_no()
     }
 
-    pub fn modify_sent_seq_no(&self, f: impl FnOnce(Wrapping<u32>) -> Wrapping<u32>) {
+    pub fn modify_sent_seq_no(&self, f: impl FnOnce(SeqNumber) -> SeqNumber) {
         self.sender.modify_sent_seq_no(f)
     }
 
@@ -400,7 +402,7 @@ impl<RT: Runtime> ControlBlock<RT> {
         if header.ack {
             let (recv_seq_no, _) = self.get_recv_seq_no();
             if self.state.get() == State::PassiveClose || self.state.get() == State::FinWait3 {
-                assert_eq!(header.ack_num, recv_seq_no + Wrapping(1));
+                assert_eq!(header.ack_num, recv_seq_no + SeqNumber::from(1));
             } else {
                 assert_eq!(header.ack_num, recv_seq_no);
             }
@@ -431,16 +433,16 @@ impl<RT: Runtime> ControlBlock<RT> {
         self.sender.current_rto()
     }
 
-    pub fn get_ack_seq_no(&self) -> (Wrapping<u32>, WatchFuture<Wrapping<u32>>) {
+    pub fn get_ack_seq_no(&self) -> (SeqNumber, WatchFuture<SeqNumber>) {
         let (seq_no, fut) = self.receive_queue.ack_seq_no.watch();
         (seq_no, fut)
     }
 
-    pub fn set_ack_seq_no(&self, new_value: Wrapping<u32>) {
+    pub fn set_ack_seq_no(&self, new_value: SeqNumber) {
         self.receive_queue.ack_seq_no.set(new_value)
     }
 
-    pub fn get_recv_seq_no(&self) -> (Wrapping<u32>, WatchFuture<Wrapping<u32>>) {
+    pub fn get_recv_seq_no(&self) -> (SeqNumber, WatchFuture<SeqNumber>) {
         self.receive_queue.recv_seq_no.watch()
     }
 
@@ -453,8 +455,8 @@ impl<RT: Runtime> ControlBlock<RT> {
     }
 
     pub fn hdr_window_size(&self) -> u16 {
-        let Wrapping(bytes_outstanding) =
-            self.receive_queue.recv_seq_no.get() - self.receive_queue.base_seq_no.get();
+        let bytes_outstanding: u32 =
+            (self.receive_queue.recv_seq_no.get() - self.receive_queue.base_seq_no.get()).into();
         let window_size = self.max_window_size - bytes_outstanding;
         let hdr_window_size = (window_size >> self.window_scale)
             .try_into()
