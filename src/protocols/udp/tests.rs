@@ -348,7 +348,7 @@ fn udp_bind_bad_file_descriptor() {
     let mut alice = test_helpers::new_alice2(now);
     let alice_port = ip::Port::try_from(80).unwrap();
     let alice_addr = ipv4::Endpoint::new(test_helpers::ALICE_IPV4, alice_port);
-    let alice_fd: FileDescriptor = u32::MAX;
+    let alice_fd: FileDescriptor = FileDescriptor::try_from(usize::MAX).unwrap();
 
     // Try to bind Alice.
     must_let!(let Err(err) = alice.udp_bind(alice_fd, alice_addr));
@@ -368,7 +368,7 @@ fn udp_close_bad_file_descriptor() {
     let alice_fd: FileDescriptor = alice.udp_socket().unwrap();
 
     // Try to close bad file descriptor.
-    must_let!(let Err(err) = alice.close(u32::MAX));
+    must_let!(let Err(err) = alice.close(FileDescriptor::try_from(usize::MAX).unwrap()));
     assert_eq!(err, Fail::BadFileDescriptor {});
 
     // Try to close Alice two times.
@@ -443,7 +443,7 @@ fn udp_push_bad_file_descriptor() {
 
     // Send data to Bob.
     let buf = BytesMut::from(&vec![0x5a; 32][..]).freeze();
-    must_let!(let Err(err) = alice.udp_pushto(u32::MAX, buf.clone(), bob_addr));
+    must_let!(let Err(err) = alice.udp_pushto(FileDescriptor::try_from(usize::MAX).unwrap(), buf.clone(), bob_addr));
     assert_eq!(err, Fail::BadFileDescriptor {});
 
     alice.rt().poll_scheduler();

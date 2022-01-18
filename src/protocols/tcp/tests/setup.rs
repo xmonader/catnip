@@ -328,7 +328,7 @@ fn connection_setup_closed_listen(
     listen_addr: ipv4::Endpoint,
 ) -> AcceptFuture<TestRuntime> {
     // Issue ACCEPT operation.
-    let socket_fd: u32 = server.tcp_socket().unwrap();
+    let socket_fd: FileDescriptor = server.tcp_socket().unwrap();
     server.tcp_bind(socket_fd, listen_addr).unwrap();
     server.tcp_listen(socket_fd, 1).unwrap();
     let accept_future: AcceptFuture<TestRuntime> = server.tcp_accept(socket_fd);

@@ -42,7 +42,7 @@ pub fn background<RT: Runtime>(
             r = sender => r,
             r = closer => r,
         };
-        error!("Connection (fd {}) terminated: {:?}", fd, r);
+        error!("Connection (fd {:?}) terminated: {:?}", fd, r);
 
         // TODO Properly clean up Peer state for this connection.
         // dead_socket_tx

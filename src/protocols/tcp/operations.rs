@@ -120,7 +120,7 @@ pub struct ConnectFuture<RT: Runtime> {
 
 impl<RT: Runtime> fmt::Debug for ConnectFuture<RT> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ConnectFuture({})", self.fd)
+        write!(f, "ConnectFuture({:?})", self.fd)
     }
 }
 
@@ -147,7 +147,7 @@ pub struct AcceptFuture<RT: Runtime> {
 
 impl<RT: Runtime> fmt::Debug for AcceptFuture<RT> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "AcceptFuture({})", self.fd)
+        write!(f, "AcceptFuture({:?})", self.fd)
     }
 }
 
@@ -171,7 +171,7 @@ pub struct PushFuture<RT: Runtime> {
 
 impl<RT: Runtime> fmt::Debug for PushFuture<RT> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "PushFuture({})", self.fd)
+        write!(f, "PushFuture({:?})", self.fd)
     }
 }
 
@@ -193,7 +193,7 @@ pub struct PopFuture<RT: Runtime> {
 
 impl<RT: Runtime> fmt::Debug for PopFuture<RT> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "PopFuture({})", self.fd)
+        write!(f, "PopFuture({:?})", self.fd)
     }
 }
 

@@ -8,7 +8,14 @@ use slab::Slab;
 //==============================================================================
 
 /// File Descriptor
-pub type FileDescriptor = u32;
+#[derive(From, Into, Debug, Eq, PartialEq, Hash, Copy, Clone)]
+pub struct FileDescriptor(usize);
+
+impl From<FileDescriptor> for i32 {
+    fn from(val: FileDescriptor) -> Self {
+        val.0 as i32
+    }
+}
 
 /// File Table Data
 struct Inner {
@@ -42,25 +49,25 @@ impl FileTable {
     /// Allocates a new entry in the target file descriptor table.
     pub fn alloc(&mut self, file: File) -> FileDescriptor {
         let ix = self.inner.table.insert(file);
-        ix as FileDescriptor
+        FileDescriptor(ix)
     }
 
     /// Gets the file associated with a file descriptor.
     pub fn get(&self, fd: FileDescriptor) -> Option<File> {
-        if !self.inner.table.contains(fd as usize) {
+        if !self.inner.table.contains(fd.into()) {
             return None;
         }
 
-        self.inner.table.get(fd as usize).cloned()
+        self.inner.table.get(fd.into()).cloned()
     }
 
     /// Releases an entry in the target file descriptor table.
     pub fn free(&mut self, fd: FileDescriptor) -> Option<File> {
-        if !self.inner.table.contains(fd as usize) {
+        if !self.inner.table.contains(fd.into()) {
             return None;
         }
 
-        let file = self.inner.table.remove(fd as usize);
+        let file = self.inner.table.remove(fd.into());
 
         Some(file)
     }
