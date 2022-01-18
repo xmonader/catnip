@@ -89,7 +89,7 @@ impl<RT: Runtime> LibOS<RT> {
             libc::SOCK_DGRAM => Protocol::Udp,
             _ => return Err(Fail::SocketTypeSupport {}),
         };
-        Ok(self.engine.socket(engine_protocol))
+        self.engine.socket(engine_protocol)
     }
 
     ///

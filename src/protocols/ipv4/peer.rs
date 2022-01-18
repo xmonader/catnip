@@ -3,7 +3,6 @@
 
 use crate::{
     fail::Fail,
-    file_table::FileTable,
     protocols::{
         arp, icmpv4,
         ipv4::datagram::{Ipv4Header, Ipv4Protocol2},
@@ -24,10 +23,10 @@ pub struct Ipv4Peer<RT: Runtime> {
 }
 
 impl<RT: Runtime> Ipv4Peer<RT> {
-    pub fn new(rt: RT, arp: arp::Peer<RT>, file_table: FileTable) -> Ipv4Peer<RT> {
-        let udp = udp::Peer::new(rt.clone(), arp.clone(), file_table.clone());
+    pub fn new(rt: RT, arp: arp::Peer<RT>) -> Ipv4Peer<RT> {
+        let udp = udp::Peer::new(rt.clone(), arp.clone());
         let icmpv4 = icmpv4::Peer::new(rt.clone(), arp.clone());
-        let tcp = tcp::Peer::new(rt.clone(), arp, file_table);
+        let tcp = tcp::Peer::new(rt.clone(), arp);
         Ipv4Peer {
             rt,
             icmpv4,

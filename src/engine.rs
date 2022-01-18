@@ -39,7 +39,7 @@ impl<RT: Runtime> Engine<RT> {
         let now = rt.now();
         let file_table = FileTable::new();
         let arp = arp::Peer::new(now, rt.clone(), rt.arp_options())?;
-        let ipv4 = ipv4::Peer::new(rt.clone(), arp.clone(), file_table.clone());
+        let ipv4 = ipv4::Peer::new(rt.clone(), arp.clone());
         Ok(Engine {
             rt,
             arp,
@@ -79,10 +79,19 @@ impl<RT: Runtime> Engine<RT> {
         self.ipv4.ping(dest_ipv4_addr, timeout)
     }
 
-    pub fn socket(&mut self, protocol: Protocol) -> FileDescriptor {
+    /// Opens a socket.
+    pub fn socket(&mut self, protocol: Protocol) -> Result<FileDescriptor, Fail> {
         match protocol {
-            Protocol::Tcp => self.ipv4.tcp.socket(),
-            Protocol::Udp => self.ipv4.udp.socket().unwrap(),
+            Protocol::Tcp => {
+                let fd = self.file_table.alloc(File::TcpSocket);
+                self.ipv4.tcp.do_socket(fd);
+                Ok(fd)
+            }
+            Protocol::Udp => {
+                let fd = self.file_table.alloc(File::UdpSocket);
+                self.ipv4.udp.do_socket(fd);
+                Ok(fd)
+            }
         }
     }
 
@@ -112,9 +121,13 @@ impl<RT: Runtime> Engine<RT> {
         }
     }
 
+    /// Accepts an incoming connection.
     pub fn accept(&mut self, fd: FileDescriptor) -> Result<Operation<RT>, Fail> {
         match self.file_table.get(fd) {
-            Some(File::TcpSocket) => Ok(Operation::from(self.ipv4.tcp.accept(fd))),
+            Some(File::TcpSocket) => {
+                let newfd = self.file_table.alloc(File::TcpSocket);
+                Ok(Operation::from(self.ipv4.tcp.do_accept(fd, newfd)))
+            }
             _ => Err(Fail::BadFileDescriptor {}),
         }
     }
@@ -182,14 +195,25 @@ impl<RT: Runtime> Engine<RT> {
 
     pub fn close(&mut self, fd: FileDescriptor) -> Result<(), Fail> {
         match self.file_table.get(fd) {
-            Some(File::TcpSocket) => self.ipv4.tcp.close(fd),
-            Some(File::UdpSocket) => self.ipv4.udp.close(fd),
-            _ => Err(Fail::BadFileDescriptor {}),
+            Some(File::TcpSocket) => {
+                self.ipv4.tcp.do_close(fd)?;
+            }
+            Some(File::UdpSocket) => {
+                self.ipv4.udp.do_close(fd)?;
+            }
+            _ => {
+                return Err(Fail::BadFileDescriptor {});
+            }
         }
+
+        self.file_table.free(fd);
+        Ok(())
     }
 
     pub fn udp_socket(&mut self) -> Result<FileDescriptor, Fail> {
-        self.ipv4.udp.socket()
+        let fd = self.file_table.alloc(File::UdpSocket);
+        self.ipv4.udp.do_socket(fd);
+        Ok(fd)
     }
 
     pub fn udp_bind(
@@ -200,8 +224,10 @@ impl<RT: Runtime> Engine<RT> {
         self.ipv4.udp.bind(socket_fd, endpoint)
     }
 
-    pub fn tcp_socket(&mut self) -> FileDescriptor {
-        self.ipv4.tcp.socket()
+    pub fn tcp_socket(&mut self) -> Result<FileDescriptor, Fail> {
+        let fd = self.file_table.alloc(File::TcpSocket);
+        self.ipv4.tcp.do_socket(fd);
+        Ok(fd)
     }
 
     pub fn tcp_connect(
@@ -220,8 +246,9 @@ impl<RT: Runtime> Engine<RT> {
         self.ipv4.tcp.bind(socket_fd, endpoint)
     }
 
-    pub fn tcp_accept(&mut self, handle: FileDescriptor) -> AcceptFuture<RT> {
-        self.ipv4.tcp.accept(handle)
+    pub fn tcp_accept(&mut self, fd: FileDescriptor) -> AcceptFuture<RT> {
+        let newfd = self.file_table.alloc(File::TcpSocket);
+        self.ipv4.tcp.do_accept(fd, newfd)
     }
 
     pub fn tcp_push(&mut self, socket_fd: FileDescriptor, buf: RT::Buf) -> PushFuture<RT> {
@@ -233,7 +260,7 @@ impl<RT: Runtime> Engine<RT> {
     }
 
     pub fn tcp_close(&mut self, socket_fd: FileDescriptor) -> Result<(), Fail> {
-        self.ipv4.tcp.close(socket_fd)
+        self.ipv4.tcp.do_close(socket_fd)
     }
 
     pub fn tcp_listen(&mut self, socket_fd: FileDescriptor, backlog: usize) -> Result<(), Fail> {

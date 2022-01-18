@@ -10,7 +10,7 @@ use super::{
 
 use crate::{
     fail::Fail,
-    file_table::{File, FileDescriptor, FileTable},
+    file_table::FileDescriptor,
     protocols::{
         arp,
         ethernet2::frame::{EtherType2, Ethernet2Header},
@@ -44,7 +44,6 @@ type OutgoingReceiver<T> = mpsc::UnboundedReceiver<OutgoingReq<T>>;
 struct UdpPeerInner<RT: Runtime> {
     rt: RT,
     arp: arp::Peer<RT>,
-    file_table: FileTable,
 
     sockets: HashMap<FileDescriptor, Socket>,
     bound: HashMap<ipv4::Endpoint, Rc<RefCell<Listener<RT::Buf>>>>,
@@ -68,14 +67,12 @@ impl<RT: Runtime> UdpPeerInner<RT> {
     fn new(
         rt: RT,
         arp: arp::Peer<RT>,
-        file_table: FileTable,
         tx: OutgoingSender<RT::Buf>,
         handle: SchedulerHandle,
     ) -> Self {
         Self {
             rt,
             arp,
-            file_table,
             sockets: HashMap::new(),
             bound: HashMap::new(),
             outgoing: tx,
@@ -117,11 +114,11 @@ impl<RT: Runtime> UdpPeerInner<RT> {
 /// Associate functions for [UdpPeer].
 impl<RT: Runtime> UdpPeer<RT> {
     /// Creates a Udp peer.
-    pub fn new(rt: RT, arp: arp::Peer<RT>, file_table: FileTable) -> Self {
+    pub fn new(rt: RT, arp: arp::Peer<RT>) -> Self {
         let (tx, rx) = mpsc::unbounded();
         let future = Self::background(rt.clone(), arp.clone(), rx);
         let handle = rt.spawn(future);
-        let inner = UdpPeerInner::new(rt, arp, file_table, tx, handle);
+        let inner = UdpPeerInner::new(rt, arp, tx, handle);
         Self {
             inner: Rc::new(RefCell::new(inner)),
         }
@@ -150,31 +147,23 @@ impl<RT: Runtime> UdpPeer<RT> {
         }
     }
 
-    ///
-    /// Dummy accept operation.
-    ///
-    /// - TODO: we should drop this function because it is meaningless for UDP.
-    ///
-    pub fn accept(&self) -> Fail {
-        Fail::Malformed {
-            details: "Operation not supported",
-        }
-    }
-
     /// Opens a UDP socket.
-    pub fn socket(&self) -> Result<FileDescriptor, Fail> {
+    pub fn do_socket(&self, fd: FileDescriptor) {
         #[cfg(feature = "profiler")]
         timer!("udp::socket");
 
         let mut inner = self.inner.borrow_mut();
-        let fd = inner.file_table.alloc(File::UdpSocket);
+
+        // Sanity check.
+        assert_eq!(
+            inner.sockets.contains_key(&fd),
+            false,
+            "file descriptor in use"
+        );
+
+        // Open socket.
         let socket = Socket::default();
-        if inner.sockets.insert(fd, socket).is_some() {
-            return Err(Fail::TooManyOpenedFiles {
-                details: "file table overflow",
-            });
-        }
-        Ok(fd)
+        inner.sockets.insert(fd, socket);
     }
 
     /// Binds a socket to an endpoint address.
@@ -222,8 +211,8 @@ impl<RT: Runtime> UdpPeer<RT> {
         })
     }
 
-    /// Closes a socket.
-    pub fn close(&self, fd: FileDescriptor) -> Result<(), Fail> {
+    /// Closes a UDP socket.
+    pub fn do_close(&self, fd: FileDescriptor) -> Result<(), Fail> {
         #[cfg(feature = "profiler")]
         timer!("udp::close");
 
@@ -240,9 +229,6 @@ impl<RT: Runtime> UdpPeer<RT> {
                 return Err(Fail::BadFileDescriptor {});
             }
         }
-
-        // Free file table.
-        inner.file_table.free(fd);
 
         Ok(())
     }

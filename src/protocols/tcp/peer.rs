@@ -7,7 +7,7 @@ use super::{
 };
 use crate::{
     fail::Fail,
-    file_table::{File, FileDescriptor, FileTable},
+    file_table::FileDescriptor,
     protocols::{
         arp,
         ethernet2::frame::{EtherType2, Ethernet2Header},
@@ -32,31 +32,71 @@ use std::{
     time::Duration,
 };
 
+#[cfg(feature = "profiler")]
+use perftools::timer;
+
+enum Socket {
+    Inactive {
+        local: Option<ipv4::Endpoint>,
+    },
+    Listening {
+        local: ipv4::Endpoint,
+    },
+    Connecting {
+        local: ipv4::Endpoint,
+        remote: ipv4::Endpoint,
+    },
+    Established {
+        local: ipv4::Endpoint,
+        remote: ipv4::Endpoint,
+    },
+}
+
+pub struct Inner<RT: Runtime> {
+    isn_generator: IsnGenerator,
+
+    ephemeral_ports: EphemeralPorts,
+
+    // FD -> local port
+    sockets: HashMap<FileDescriptor, Socket>,
+
+    passive: HashMap<ipv4::Endpoint, PassiveSocket<RT>>,
+    connecting: HashMap<(ipv4::Endpoint, ipv4::Endpoint), ActiveOpenSocket<RT>>,
+    established: HashMap<(ipv4::Endpoint, ipv4::Endpoint), EstablishedSocket<RT>>,
+
+    rt: RT,
+    arp: arp::Peer<RT>,
+
+    dead_socket_tx: mpsc::UnboundedSender<FileDescriptor>,
+}
+
 pub struct Peer<RT: Runtime> {
     pub(super) inner: Rc<RefCell<Inner<RT>>>,
 }
 
 impl<RT: Runtime> Peer<RT> {
-    pub fn new(rt: RT, arp: arp::Peer<RT>, file_table: FileTable) -> Self {
+    pub fn new(rt: RT, arp: arp::Peer<RT>) -> Self {
         let (tx, rx) = mpsc::unbounded();
-        let inner = Rc::new(RefCell::new(Inner::new(
-            rt.clone(),
-            arp,
-            file_table,
-            tx,
-            rx,
-        )));
+        let inner = Rc::new(RefCell::new(Inner::new(rt.clone(), arp, tx, rx)));
         Self { inner }
     }
 
-    pub fn socket(&self) -> FileDescriptor {
+    /// Opens a TCP socket.
+    pub fn do_socket(&self, fd: FileDescriptor) {
+        #[cfg(feature = "profiler")]
+        timer!("tcp::socket");
+
         let mut inner = self.inner.borrow_mut();
-        let fd = inner.file_table.alloc(File::TcpSocket);
-        assert!(inner
-            .sockets
-            .insert(fd, Socket::Inactive { local: None })
-            .is_none());
-        fd
+
+        // Sanity check.
+        assert_eq!(
+            inner.sockets.contains_key(&fd),
+            false,
+            "file descriptor in use"
+        );
+
+        let socket = Socket::Inactive { local: None };
+        inner.sockets.insert(fd, socket);
     }
 
     pub fn bind(&self, fd: FileDescriptor, addr: ipv4::Endpoint) -> Result<(), Fail> {
@@ -104,9 +144,20 @@ impl<RT: Runtime> Peer<RT> {
         Ok(())
     }
 
+    /// Accepts an incoming connection.
+    pub fn do_accept(&self, fd: FileDescriptor, newfd: FileDescriptor) -> AcceptFuture<RT> {
+        AcceptFuture {
+            fd,
+            newfd,
+            inner: self.inner.clone(),
+        }
+    }
+
+    /// Handles an incoming connection.
     pub fn poll_accept(
         &self,
         fd: FileDescriptor,
+        newfd: FileDescriptor,
         ctx: &mut Context,
     ) -> Poll<Result<FileDescriptor, Fail>> {
         let mut inner_ = self.inner.borrow_mut();
@@ -130,25 +181,17 @@ impl<RT: Runtime> Peer<RT> {
             Poll::Ready(Ok(e)) => e,
             Poll::Ready(Err(e)) => return Poll::Ready(Err(e)),
         };
-        let fd = inner.file_table.alloc(File::TcpSocket);
-        let established = EstablishedSocket::new(cb, fd, inner.dead_socket_tx.clone());
+        let established = EstablishedSocket::new(cb, newfd, inner.dead_socket_tx.clone());
         let key = (established.cb.get_local(), established.cb.get_remote());
 
         let socket = Socket::Established {
             local: established.cb.get_local(),
             remote: established.cb.get_remote(),
         };
-        assert!(inner.sockets.insert(fd, socket).is_none());
+        assert!(inner.sockets.insert(newfd, socket).is_none());
         assert!(inner.established.insert(key, established).is_none());
 
-        Poll::Ready(Ok(fd))
-    }
-
-    pub fn accept(&self, fd: FileDescriptor) -> AcceptFuture<RT> {
-        AcceptFuture {
-            fd,
-            inner: self.inner.clone(),
-        }
+        Poll::Ready(Ok(newfd))
     }
 
     pub fn connect(&self, fd: FileDescriptor, remote: ipv4::Endpoint) -> ConnectFuture<RT> {
@@ -259,8 +302,10 @@ impl<RT: Runtime> Peer<RT> {
         }
     }
 
-    pub fn close(&self, fd: FileDescriptor) -> Result<(), Fail> {
+    /// Closes a TCP socket.
+    pub fn do_close(&self, fd: FileDescriptor) -> Result<(), Fail> {
         let inner = self.inner.borrow_mut();
+
         match inner.sockets.get(&fd) {
             Some(Socket::Established { local, remote }) => {
                 let key = (*local, *remote);
@@ -273,12 +318,15 @@ impl<RT: Runtime> Peer<RT> {
                     }
                 }
             }
+
             Some(..) => {
-                // TODO: Implement close for listening sockets.
-                // unimplemented!();
+                return Err(Fail::Unsupported {
+                    details: "implement close for listening sockets",
+                })
             }
             None => return Err(Fail::Malformed { details: "Bad FD" }),
         }
+
         Ok(())
     }
 
@@ -340,53 +388,15 @@ impl<RT: Runtime> Peer<RT> {
     }
 }
 
-enum Socket {
-    Inactive {
-        local: Option<ipv4::Endpoint>,
-    },
-    Listening {
-        local: ipv4::Endpoint,
-    },
-    Connecting {
-        local: ipv4::Endpoint,
-        remote: ipv4::Endpoint,
-    },
-    Established {
-        local: ipv4::Endpoint,
-        remote: ipv4::Endpoint,
-    },
-}
-
-pub struct Inner<RT: Runtime> {
-    isn_generator: IsnGenerator,
-
-    file_table: FileTable,
-    ephemeral_ports: EphemeralPorts,
-
-    // FD -> local port
-    sockets: HashMap<FileDescriptor, Socket>,
-
-    passive: HashMap<ipv4::Endpoint, PassiveSocket<RT>>,
-    connecting: HashMap<(ipv4::Endpoint, ipv4::Endpoint), ActiveOpenSocket<RT>>,
-    established: HashMap<(ipv4::Endpoint, ipv4::Endpoint), EstablishedSocket<RT>>,
-
-    rt: RT,
-    arp: arp::Peer<RT>,
-
-    dead_socket_tx: mpsc::UnboundedSender<FileDescriptor>,
-}
-
 impl<RT: Runtime> Inner<RT> {
     fn new(
         rt: RT,
         arp: arp::Peer<RT>,
-        file_table: FileTable,
         dead_socket_tx: mpsc::UnboundedSender<FileDescriptor>,
         _dead_socket_rx: mpsc::UnboundedReceiver<FileDescriptor>,
     ) -> Self {
         Self {
             isn_generator: IsnGenerator::new(rt.rng_gen()),
-            file_table,
             ephemeral_ports: EphemeralPorts::new(&rt),
             sockets: HashMap::new(),
             passive: HashMap::new(),

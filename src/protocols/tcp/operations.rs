@@ -141,6 +141,7 @@ impl<RT: Runtime> Future for ConnectFuture<RT> {
 
 pub struct AcceptFuture<RT: Runtime> {
     pub fd: FileDescriptor,
+    pub newfd: FileDescriptor,
     pub inner: Rc<RefCell<Inner<RT>>>,
 }
 
@@ -158,7 +159,7 @@ impl<RT: Runtime> Future for AcceptFuture<RT> {
         let peer = Peer {
             inner: self_.inner.clone(),
         };
-        peer.poll_accept(self_.fd, context)
+        peer.poll_accept(self_.fd, self_.newfd, context)
     }
 }
 

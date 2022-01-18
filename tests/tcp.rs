@@ -38,7 +38,7 @@ fn do_tcp_connection_setup(libos: &mut LibOS<DummyRuntime>, port: u16) {
     let sockfd = libos.socket(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap();
     libos.bind(sockfd, local).unwrap();
     libos.listen(sockfd, 8).unwrap();
-    libos.close(sockfd).unwrap();
+    libos.close(sockfd).unwrap_err();
 }
 
 #[test]
@@ -75,7 +75,7 @@ fn do_tcp_establish_connection(port: u16) {
 
         // Close connection.
         libos.close(qd).unwrap();
-        libos.close(sockfd).unwrap();
+        libos.close(sockfd).unwrap_err();
     });
 
     let bob = thread::spawn(move || {
@@ -138,7 +138,7 @@ fn do_tcp_push_remote(port: u16) {
 
         // Close connection.
         libos.close(qd).unwrap();
-        libos.close(sockfd).unwrap();
+        libos.close(sockfd).unwrap_err();
     });
 
     let bob = thread::spawn(move || {
@@ -306,7 +306,7 @@ fn do_tcp_bad_listen(port: u16) {
             details: "backlog length"
         })
     );
-    libos.close(sockfd).unwrap();
+    libos.close(sockfd).unwrap_err();
 }
 
 #[test]
@@ -358,7 +358,7 @@ fn do_tcp_bad_connect(port: u16) {
 
         // Close connection.
         libos.close(qd).unwrap();
-        libos.close(sockfd).unwrap();
+        libos.close(sockfd).unwrap_err();
     });
 
     let bob = thread::spawn(move || {

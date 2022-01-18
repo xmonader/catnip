@@ -312,7 +312,7 @@ fn connection_setup_listen_syn_sent(
     listen_addr: ipv4::Endpoint,
 ) -> (FileDescriptor, ConnectFuture<TestRuntime>, Bytes) {
     // Issue CONNECT operation.
-    let client_fd: FileDescriptor = client.tcp_socket();
+    let client_fd: FileDescriptor = client.tcp_socket().unwrap();
     let connect_future: ConnectFuture<TestRuntime> = client.tcp_connect(client_fd, listen_addr);
 
     // SYN_SENT state.
@@ -328,7 +328,7 @@ fn connection_setup_closed_listen(
     listen_addr: ipv4::Endpoint,
 ) -> AcceptFuture<TestRuntime> {
     // Issue ACCEPT operation.
-    let socket_fd: u32 = server.tcp_socket();
+    let socket_fd: u32 = server.tcp_socket().unwrap();
     server.tcp_bind(socket_fd, listen_addr).unwrap();
     server.tcp_listen(socket_fd, 1).unwrap();
     let accept_future: AcceptFuture<TestRuntime> = server.tcp_accept(socket_fd);
