@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 use slab::Slab;
-use std::{cell::RefCell, rc::Rc};
 
 //==============================================================================
 // Constants & Structures
@@ -17,9 +16,8 @@ struct Inner {
 }
 
 /// File Table
-#[derive(Clone)]
 pub struct FileTable {
-    inner: Rc<RefCell<Inner>>,
+    inner: Inner,
 }
 
 /// File Types
@@ -38,38 +36,33 @@ impl FileTable {
     /// Creates a file table.
     pub fn new() -> Self {
         let inner = Inner { table: Slab::new() };
-        Self {
-            inner: Rc::new(RefCell::new(inner)),
-        }
+        Self { inner }
     }
 
     /// Allocates a new entry in the target file descriptor table.
-    pub fn alloc(&self, file: File) -> FileDescriptor {
-        let mut inner = self.inner.borrow_mut();
-        let ix = inner.table.insert(file);
+    pub fn alloc(&mut self, file: File) -> FileDescriptor {
+        let ix = self.inner.table.insert(file);
         ix as FileDescriptor
     }
 
     /// Gets the file associated with a file descriptor.
     pub fn get(&self, fd: FileDescriptor) -> Option<File> {
-        let inner = self.inner.borrow();
-
-        if !inner.table.contains(fd as usize) {
+        if !self.inner.table.contains(fd as usize) {
             return None;
         }
 
-        inner.table.get(fd as usize).cloned()
+        self.inner.table.get(fd as usize).cloned()
     }
 
     /// Releases an entry in the target file descriptor table.
-    pub fn free(&self, fd: FileDescriptor) -> Option<File> {
-        let mut inner = self.inner.borrow_mut();
-
-        if !inner.table.contains(fd as usize) {
+    pub fn free(&mut self, fd: FileDescriptor) -> Option<File> {
+        if !self.inner.table.contains(fd as usize) {
             return None;
         }
 
-        Some(inner.table.remove(fd as usize))
+        let file = self.inner.table.remove(fd as usize);
+
+        Some(file)
     }
 }
 
