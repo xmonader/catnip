@@ -18,14 +18,9 @@ pub enum IoQueueType {
 #[derive(From, Into, Debug, Eq, PartialEq, Hash, Copy, Clone)]
 pub struct IoQueueDescriptor(usize);
 
-/// IO Queue Table Data
-struct Inner {
-    table: Slab<IoQueueType>,
-}
-
 /// IO Queue Table
 pub struct IoQueueTable {
-    inner: Inner,
+    table: Slab<IoQueueType>,
 }
 
 //==============================================================================
@@ -61,32 +56,31 @@ impl From<i32> for IoQueueDescriptor {
 impl IoQueueTable {
     /// Creates an IO queue table.
     pub fn new() -> Self {
-        let inner = Inner { table: Slab::new() };
-        Self { inner }
+        Self { table: Slab::new() }
     }
 
     /// Allocates a new entry in the target IO queue descriptor table.
     pub fn alloc(&mut self, file: IoQueueType) -> IoQueueDescriptor {
-        let ix = self.inner.table.insert(file);
+        let ix = self.table.insert(file);
         IoQueueDescriptor(ix)
     }
 
     /// Gets the file associated with an IO queue descriptor.
     pub fn get(&self, fd: IoQueueDescriptor) -> Option<IoQueueType> {
-        if !self.inner.table.contains(fd.into()) {
+        if !self.table.contains(fd.into()) {
             return None;
         }
 
-        self.inner.table.get(fd.into()).cloned()
+        self.table.get(fd.into()).cloned()
     }
 
     /// Releases an entry in the target IO queue descriptor table.
     pub fn free(&mut self, fd: IoQueueDescriptor) -> Option<IoQueueType> {
-        if !self.inner.table.contains(fd.into()) {
+        if !self.table.contains(fd.into()) {
             return None;
         }
 
-        let file = self.inner.table.remove(fd.into());
+        let file = self.table.remove(fd.into());
 
         Some(file)
     }
