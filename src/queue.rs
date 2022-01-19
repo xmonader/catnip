@@ -34,13 +34,6 @@ impl From<IoQueueDescriptor> for i32 {
     }
 }
 
-/// Default trait implementation for [IO QueueTable].
-impl Default for IoQueueTable {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 /// [From<i32>] trait for [IoQueueDescriptor]
 impl From<i32> for IoQueueDescriptor {
     fn from(val: i32) -> Self {
