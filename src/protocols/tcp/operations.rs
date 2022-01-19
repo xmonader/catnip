@@ -4,8 +4,8 @@
 use super::peer::{Inner, Peer};
 use crate::{
     fail::Fail,
-    file_table::FileDescriptor,
     operations::{OperationResult, ResultFuture},
+    queue::IoQueueDescriptor,
     runtime::Runtime,
 };
 use std::{
@@ -62,7 +62,7 @@ impl<RT: Runtime> Future for TcpOperation<RT> {
 }
 
 impl<RT: Runtime> TcpOperation<RT> {
-    pub fn expect_result(self) -> (FileDescriptor, OperationResult<RT>) {
+    pub fn expect_result(self) -> (IoQueueDescriptor, OperationResult<RT>) {
         use TcpOperation::*;
 
         match self {
@@ -113,14 +113,14 @@ pub enum ConnectFutureState {
 }
 
 pub struct ConnectFuture<RT: Runtime> {
-    pub fd: FileDescriptor,
+    pub fd: IoQueueDescriptor,
     pub state: ConnectFutureState,
     pub inner: Rc<RefCell<Inner<RT>>>,
 }
 
 impl<RT: Runtime> fmt::Debug for ConnectFuture<RT> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ConnectFuture({})", self.fd)
+        write!(f, "ConnectFuture({:?})", self.fd)
     }
 }
 
@@ -140,37 +140,38 @@ impl<RT: Runtime> Future for ConnectFuture<RT> {
 }
 
 pub struct AcceptFuture<RT: Runtime> {
-    pub fd: FileDescriptor,
+    pub fd: IoQueueDescriptor,
+    pub newfd: IoQueueDescriptor,
     pub inner: Rc<RefCell<Inner<RT>>>,
 }
 
 impl<RT: Runtime> fmt::Debug for AcceptFuture<RT> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "AcceptFuture({})", self.fd)
+        write!(f, "AcceptFuture({:?})", self.fd)
     }
 }
 
 impl<RT: Runtime> Future for AcceptFuture<RT> {
-    type Output = Result<FileDescriptor, Fail>;
+    type Output = Result<IoQueueDescriptor, Fail>;
 
     fn poll(self: Pin<&mut Self>, context: &mut Context) -> Poll<Self::Output> {
         let self_ = self.get_mut();
         let peer = Peer {
             inner: self_.inner.clone(),
         };
-        peer.poll_accept(self_.fd, context)
+        peer.poll_accept(self_.fd, self_.newfd, context)
     }
 }
 
 pub struct PushFuture<RT: Runtime> {
-    pub fd: FileDescriptor,
+    pub fd: IoQueueDescriptor,
     pub err: Option<Fail>,
     pub _marker: std::marker::PhantomData<RT>,
 }
 
 impl<RT: Runtime> fmt::Debug for PushFuture<RT> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "PushFuture({})", self.fd)
+        write!(f, "PushFuture({:?})", self.fd)
     }
 }
 
@@ -186,13 +187,13 @@ impl<RT: Runtime> Future for PushFuture<RT> {
 }
 
 pub struct PopFuture<RT: Runtime> {
-    pub fd: FileDescriptor,
+    pub fd: IoQueueDescriptor,
     pub inner: Rc<RefCell<Inner<RT>>>,
 }
 
 impl<RT: Runtime> fmt::Debug for PopFuture<RT> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "PopFuture({})", self.fd)
+        write!(f, "PopFuture({:?})", self.fd)
     }
 }
 

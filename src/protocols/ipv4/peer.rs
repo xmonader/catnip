@@ -3,7 +3,6 @@
 
 use crate::{
     fail::Fail,
-    file_table::FileTable,
     protocols::{
         arp, icmpv4,
         ipv4::datagram::{Ipv4Header, Ipv4Protocol2},
@@ -14,7 +13,7 @@ use crate::{
 use std::{future::Future, net::Ipv4Addr, time::Duration};
 
 #[cfg(test)]
-use crate::file_table::FileDescriptor;
+use crate::queue::IoQueueDescriptor;
 
 pub struct Ipv4Peer<RT: Runtime> {
     rt: RT,
@@ -24,10 +23,10 @@ pub struct Ipv4Peer<RT: Runtime> {
 }
 
 impl<RT: Runtime> Ipv4Peer<RT> {
-    pub fn new(rt: RT, arp: arp::Peer<RT>, file_table: FileTable) -> Ipv4Peer<RT> {
-        let udp = udp::Peer::new(rt.clone(), arp.clone(), file_table.clone());
+    pub fn new(rt: RT, arp: arp::Peer<RT>) -> Ipv4Peer<RT> {
+        let udp = udp::Peer::new(rt.clone(), arp.clone());
         let icmpv4 = icmpv4::Peer::new(rt.clone(), arp.clone());
-        let tcp = tcp::Peer::new(rt.clone(), arp, file_table);
+        let tcp = tcp::Peer::new(rt.clone(), arp);
         Ipv4Peer {
             rt,
             icmpv4,
@@ -60,11 +59,11 @@ impl<RT: Runtime> Ipv4Peer<RT> {
 
 #[cfg(test)]
 impl<RT: Runtime> Ipv4Peer<RT> {
-    pub fn tcp_mss(&self, fd: FileDescriptor) -> Result<usize, Fail> {
+    pub fn tcp_mss(&self, fd: IoQueueDescriptor) -> Result<usize, Fail> {
         self.tcp.remote_mss(fd)
     }
 
-    pub fn tcp_rto(&self, fd: FileDescriptor) -> Result<Duration, Fail> {
+    pub fn tcp_rto(&self, fd: IoQueueDescriptor) -> Result<Duration, Fail> {
         self.tcp.current_rto(fd)
     }
 }

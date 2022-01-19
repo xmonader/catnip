@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::{fail::Fail, file_table::FileDescriptor, protocols::ipv4, runtime::Runtime};
+use crate::{fail::Fail, protocols::ipv4, queue::IoQueueDescriptor, runtime::Runtime};
 use std::{
     fmt,
     future::Future,
@@ -42,7 +42,7 @@ where
 
 pub enum OperationResult<RT: Runtime> {
     Connect,
-    Accept(FileDescriptor),
+    Accept(IoQueueDescriptor),
     Push,
     Pop(Option<ipv4::Endpoint>, RT::Buf),
     Failed(Fail),

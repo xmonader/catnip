@@ -10,13 +10,13 @@ use super::{
 
 use crate::{
     fail::Fail,
-    file_table::{File, FileDescriptor, FileTable},
     protocols::{
         arp,
         ethernet2::frame::{EtherType2, Ethernet2Header},
         ipv4,
         ipv4::datagram::{Ipv4Header, Ipv4Protocol2},
     },
+    queue::IoQueueDescriptor,
     runtime::Runtime,
     scheduler::SchedulerHandle,
 };
@@ -44,9 +44,8 @@ type OutgoingReceiver<T> = mpsc::UnboundedReceiver<OutgoingReq<T>>;
 struct UdpPeerInner<RT: Runtime> {
     rt: RT,
     arp: arp::Peer<RT>,
-    file_table: FileTable,
 
-    sockets: HashMap<FileDescriptor, Socket>,
+    sockets: HashMap<IoQueueDescriptor, Socket>,
     bound: HashMap<ipv4::Endpoint, Rc<RefCell<Listener<RT::Buf>>>>,
 
     outgoing: OutgoingSender<RT::Buf>,
@@ -68,14 +67,12 @@ impl<RT: Runtime> UdpPeerInner<RT> {
     fn new(
         rt: RT,
         arp: arp::Peer<RT>,
-        file_table: FileTable,
         tx: OutgoingSender<RT::Buf>,
         handle: SchedulerHandle,
     ) -> Self {
         Self {
             rt,
             arp,
-            file_table,
             sockets: HashMap::new(),
             bound: HashMap::new(),
             outgoing: tx,
@@ -117,11 +114,11 @@ impl<RT: Runtime> UdpPeerInner<RT> {
 /// Associate functions for [UdpPeer].
 impl<RT: Runtime> UdpPeer<RT> {
     /// Creates a Udp peer.
-    pub fn new(rt: RT, arp: arp::Peer<RT>, file_table: FileTable) -> Self {
+    pub fn new(rt: RT, arp: arp::Peer<RT>) -> Self {
         let (tx, rx) = mpsc::unbounded();
         let future = Self::background(rt.clone(), arp.clone(), rx);
         let handle = rt.spawn(future);
-        let inner = UdpPeerInner::new(rt, arp, file_table, tx, handle);
+        let inner = UdpPeerInner::new(rt, arp, tx, handle);
         Self {
             inner: Rc::new(RefCell::new(inner)),
         }
@@ -150,35 +147,27 @@ impl<RT: Runtime> UdpPeer<RT> {
         }
     }
 
-    ///
-    /// Dummy accept operation.
-    ///
-    /// - TODO: we should drop this function because it is meaningless for UDP.
-    ///
-    pub fn accept(&self) -> Fail {
-        Fail::Malformed {
-            details: "Operation not supported",
-        }
-    }
-
     /// Opens a UDP socket.
-    pub fn socket(&self) -> Result<FileDescriptor, Fail> {
+    pub fn do_socket(&self, fd: IoQueueDescriptor) {
         #[cfg(feature = "profiler")]
         timer!("udp::socket");
 
         let mut inner = self.inner.borrow_mut();
-        let fd = inner.file_table.alloc(File::UdpSocket);
+
+        // Sanity check.
+        assert_eq!(
+            inner.sockets.contains_key(&fd),
+            false,
+            "file descriptor in use"
+        );
+
+        // Open socket.
         let socket = Socket::default();
-        if inner.sockets.insert(fd, socket).is_some() {
-            return Err(Fail::TooManyOpenedFiles {
-                details: "file table overflow",
-            });
-        }
-        Ok(fd)
+        inner.sockets.insert(fd, socket);
     }
 
     /// Binds a socket to an endpoint address.
-    pub fn bind(&self, fd: FileDescriptor, addr: ipv4::Endpoint) -> Result<(), Fail> {
+    pub fn bind(&self, fd: IoQueueDescriptor, addr: ipv4::Endpoint) -> Result<(), Fail> {
         #[cfg(feature = "profiler")]
         timer!("udp::bind");
 
@@ -216,14 +205,14 @@ impl<RT: Runtime> UdpPeer<RT> {
     ///
     /// - TODO: we should drop this function because it is meaningless for UDP.
     ///
-    pub fn connect(&self, _fd: FileDescriptor, _addr: ipv4::Endpoint) -> Result<(), Fail> {
+    pub fn connect(&self, _fd: IoQueueDescriptor, _addr: ipv4::Endpoint) -> Result<(), Fail> {
         Err(Fail::Malformed {
             details: "Operation not supported",
         })
     }
 
-    /// Closes a socket.
-    pub fn close(&self, fd: FileDescriptor) -> Result<(), Fail> {
+    /// Closes a UDP socket.
+    pub fn do_close(&self, fd: IoQueueDescriptor) -> Result<(), Fail> {
         #[cfg(feature = "profiler")]
         timer!("udp::close");
 
@@ -240,9 +229,6 @@ impl<RT: Runtime> UdpPeer<RT> {
                 return Err(Fail::BadFileDescriptor {});
             }
         }
-
-        // Free file table.
-        inner.file_table.free(fd);
 
         Ok(())
     }
@@ -276,7 +262,7 @@ impl<RT: Runtime> UdpPeer<RT> {
     }
 
     /// Pushes data to a socket.
-    pub fn push(&self, fd: FileDescriptor, buf: RT::Buf) -> Result<(), Fail> {
+    pub fn push(&self, fd: IoQueueDescriptor, buf: RT::Buf) -> Result<(), Fail> {
         #[cfg(feature = "profiler")]
         timer!("udp::push");
 
@@ -293,7 +279,12 @@ impl<RT: Runtime> UdpPeer<RT> {
         }
     }
 
-    pub fn pushto(&self, fd: FileDescriptor, buf: RT::Buf, to: ipv4::Endpoint) -> Result<(), Fail> {
+    pub fn pushto(
+        &self,
+        fd: IoQueueDescriptor,
+        buf: RT::Buf,
+        to: ipv4::Endpoint,
+    ) -> Result<(), Fail> {
         #[cfg(feature = "profiler")]
         timer!("udp::pushto");
 
@@ -306,7 +297,7 @@ impl<RT: Runtime> UdpPeer<RT> {
     }
 
     /// Pops data from a socket.
-    pub fn pop(&self, fd: FileDescriptor) -> PopFuture<RT> {
+    pub fn pop(&self, fd: IoQueueDescriptor) -> PopFuture<RT> {
         #[cfg(feature = "profiler")]
         timer!("udp::pop");
 

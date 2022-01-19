@@ -3,7 +3,7 @@
 
 #![allow(non_camel_case_types)]
 
-use crate::{file_table::FileDescriptor, operations::OperationResult, runtime::Runtime};
+use crate::{operations::OperationResult, queue::IoQueueDescriptor, runtime::Runtime};
 use libc::{c_int, c_void, sockaddr_in};
 use std::mem;
 
@@ -63,13 +63,13 @@ impl dmtr_qresult_t {
     pub fn pack<RT: Runtime>(
         rt: &RT,
         result: OperationResult<RT>,
-        qd: FileDescriptor,
+        qd: IoQueueDescriptor,
         qt: u64,
     ) -> Self {
         match result {
             OperationResult::Connect => Self {
                 qr_opcode: dmtr_opcode_t::DMTR_OPC_CONNECT,
-                qr_qd: qd as c_int,
+                qr_qd: qd.into(),
                 qr_qt: qt,
                 qr_value: unsafe { mem::zeroed() },
             },
@@ -77,20 +77,20 @@ impl dmtr_qresult_t {
                 let sin = unsafe { mem::zeroed() };
                 let qr_value = dmtr_qr_value_t {
                     ares: dmtr_accept_result_t {
-                        qd: new_qd as c_int,
+                        qd: new_qd.into(),
                         addr: sin,
                     },
                 };
                 Self {
                     qr_opcode: dmtr_opcode_t::DMTR_OPC_ACCEPT,
-                    qr_qd: qd as c_int,
+                    qr_qd: qd.into(),
                     qr_qt: qt,
                     qr_value,
                 }
             }
             OperationResult::Push => Self {
                 qr_opcode: dmtr_opcode_t::DMTR_OPC_PUSH,
-                qr_qd: qd as c_int,
+                qr_qd: qd.into(),
                 qr_qt: qt,
                 qr_value: unsafe { mem::zeroed() },
             },
@@ -103,7 +103,7 @@ impl dmtr_qresult_t {
                 let qr_value = dmtr_qr_value_t { sga };
                 Self {
                     qr_opcode: dmtr_opcode_t::DMTR_OPC_POP,
-                    qr_qd: qd as c_int,
+                    qr_qd: qd.into(),
                     qr_qt: qt,
                     qr_value,
                 }
@@ -112,7 +112,7 @@ impl dmtr_qresult_t {
                 warn!("Operation Failed: {:?}", e);
                 Self {
                     qr_opcode: dmtr_opcode_t::DMTR_OPC_FAILED,
-                    qr_qd: qd as c_int,
+                    qr_qd: qd.into(),
                     qr_qt: qt,
                     qr_value: unsafe { mem::zeroed() },
                 }

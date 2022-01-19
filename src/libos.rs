@@ -7,11 +7,11 @@
 use crate::{
     engine::Engine,
     fail::Fail,
-    file_table::FileDescriptor,
     interop::{dmtr_qresult_t, dmtr_sgarray_t},
     operations::OperationResult,
     protocols::ipv4::Endpoint,
     protocols::Protocol,
+    queue::IoQueueDescriptor,
     runtime::Runtime,
     scheduler::{Operation, SchedulerHandle},
 };
@@ -72,7 +72,7 @@ impl<RT: Runtime> LibOS<RT> {
         domain: c_int,
         socket_type: c_int,
         _protocol: c_int,
-    ) -> Result<FileDescriptor, Fail> {
+    ) -> Result<IoQueueDescriptor, Fail> {
         #[cfg(feature = "profiler")]
         timer!("catnip::socket");
         trace!(
@@ -89,7 +89,7 @@ impl<RT: Runtime> LibOS<RT> {
             libc::SOCK_DGRAM => Protocol::Udp,
             _ => return Err(Fail::SocketTypeSupport {}),
         };
-        Ok(self.engine.socket(engine_protocol))
+        self.engine.socket(engine_protocol)
     }
 
     ///
@@ -103,7 +103,7 @@ impl<RT: Runtime> LibOS<RT> {
     /// Upon successful completion, `Ok(())` is returned. Upon failure, `Fail` is
     /// returned instead.
     ///
-    pub fn bind(&mut self, fd: FileDescriptor, local: Endpoint) -> Result<(), Fail> {
+    pub fn bind(&mut self, fd: IoQueueDescriptor, local: Endpoint) -> Result<(), Fail> {
         #[cfg(feature = "profiler")]
         timer!("catnip::bind");
         trace!("bind(): fd={:?} local={:?}", fd, local);
@@ -126,7 +126,7 @@ impl<RT: Runtime> LibOS<RT> {
     /// Upon successful completion, `Ok(())` is returned. Upon failure, `Fail` is
     /// returned instead.
     ///
-    pub fn listen(&mut self, fd: FileDescriptor, backlog: usize) -> Result<(), Fail> {
+    pub fn listen(&mut self, fd: IoQueueDescriptor, backlog: usize) -> Result<(), Fail> {
         #[cfg(feature = "profiler")]
         timer!("catnip::listen");
         trace!("listen(): fd={:?} backlog={:?}", fd, backlog);
@@ -150,7 +150,7 @@ impl<RT: Runtime> LibOS<RT> {
     /// used to wait for a connection request to arrive. Upon failure, `Fail` is
     /// returned instead.
     ///
-    pub fn accept(&mut self, fd: FileDescriptor) -> Result<QToken, Fail> {
+    pub fn accept(&mut self, fd: IoQueueDescriptor) -> Result<QToken, Fail> {
         #[cfg(feature = "profiler")]
         timer!("catnip::accept");
         trace!("accept(): {:?}", fd);
@@ -172,7 +172,7 @@ impl<RT: Runtime> LibOS<RT> {
     /// remote endpoints. Upon failure, `Fail` is
     /// returned instead.
     ///
-    pub fn connect(&mut self, fd: FileDescriptor, remote: Endpoint) -> Result<QToken, Fail> {
+    pub fn connect(&mut self, fd: IoQueueDescriptor, remote: Endpoint) -> Result<QToken, Fail> {
         #[cfg(feature = "profiler")]
         timer!("catnip::connect");
         trace!("connect(): fd={:?} remote={:?}", fd, remote);
@@ -190,7 +190,7 @@ impl<RT: Runtime> LibOS<RT> {
     /// Upon successful completion, `Ok(())` is returned. Upon failure, `Fail` is
     /// returned instead.
     ///
-    pub fn close(&mut self, fd: FileDescriptor) -> Result<(), Fail> {
+    pub fn close(&mut self, fd: IoQueueDescriptor) -> Result<(), Fail> {
         #[cfg(feature = "profiler")]
         timer!("catnip::close");
         trace!("close(): fd={:?}", fd);
@@ -200,7 +200,7 @@ impl<RT: Runtime> LibOS<RT> {
     /// Create a push request for Demikernel to asynchronously write data from `sga` to the
     /// IO connection represented by `fd`. This operation returns immediately with a `QToken`.
     /// The data has been written when [`wait`ing](Self::wait) on the QToken returns.
-    pub fn push(&mut self, fd: FileDescriptor, sga: &dmtr_sgarray_t) -> Result<QToken, Fail> {
+    pub fn push(&mut self, fd: IoQueueDescriptor, sga: &dmtr_sgarray_t) -> Result<QToken, Fail> {
         #[cfg(feature = "profiler")]
         timer!("catnip::push");
         trace!("push(): fd={:?}", fd);
@@ -216,7 +216,7 @@ impl<RT: Runtime> LibOS<RT> {
 
     /// Similar to [push](Self::push) but uses a [Runtime]-specific buffer instead of the
     /// [dmtr_sgarray_t].
-    pub fn push2(&mut self, fd: FileDescriptor, buf: RT::Buf) -> Result<QToken, Fail> {
+    pub fn push2(&mut self, fd: IoQueueDescriptor, buf: RT::Buf) -> Result<QToken, Fail> {
         #[cfg(feature = "profiler")]
         timer!("catnip::push2");
         trace!("push2(): fd={:?}", fd);
@@ -231,7 +231,7 @@ impl<RT: Runtime> LibOS<RT> {
 
     pub fn pushto(
         &mut self,
-        fd: FileDescriptor,
+        fd: IoQueueDescriptor,
         sga: &dmtr_sgarray_t,
         to: Endpoint,
     ) -> Result<QToken, Fail> {
@@ -249,7 +249,7 @@ impl<RT: Runtime> LibOS<RT> {
 
     pub fn pushto2(
         &mut self,
-        fd: FileDescriptor,
+        fd: IoQueueDescriptor,
         buf: RT::Buf,
         to: Endpoint,
     ) -> Result<QToken, Fail> {
@@ -278,7 +278,7 @@ impl<RT: Runtime> LibOS<RT> {
 
     /// Create a pop request to write data from IO connection represented by `fd` into a buffer
     /// allocated by the application.
-    pub fn pop(&mut self, fd: FileDescriptor) -> Result<QToken, Fail> {
+    pub fn pop(&mut self, fd: IoQueueDescriptor) -> Result<QToken, Fail> {
         #[cfg(feature = "profiler")]
         timer!("catnip::pop");
 
@@ -320,7 +320,7 @@ impl<RT: Runtime> LibOS<RT> {
 
     /// Block until request represented by `qt` is finished returning the file descriptor
     /// representing this request and the results of that operation.
-    pub fn wait2(&mut self, qt: QToken) -> (FileDescriptor, OperationResult<RT>) {
+    pub fn wait2(&mut self, qt: QToken) -> (IoQueueDescriptor, OperationResult<RT>) {
         #[cfg(feature = "profiler")]
         timer!("catnip::wait2");
         trace!("wait2(): qt={:?}", qt);
@@ -369,7 +369,7 @@ impl<RT: Runtime> LibOS<RT> {
         }
     }
 
-    pub fn wait_any2(&mut self, qts: &[QToken]) -> (usize, FileDescriptor, OperationResult<RT>) {
+    pub fn wait_any2(&mut self, qts: &[QToken]) -> (usize, IoQueueDescriptor, OperationResult<RT>) {
         #[cfg(feature = "profiler")]
         timer!("catnip::wait_any2");
         trace!("wait_any2(): qts={:?}", qts);
@@ -386,7 +386,7 @@ impl<RT: Runtime> LibOS<RT> {
         }
     }
 
-    pub fn is_qd_valid(&self, _fd: FileDescriptor) -> bool {
+    pub fn is_qd_valid(&self, _fd: IoQueueDescriptor) -> bool {
         true
     }
 
@@ -394,7 +394,10 @@ impl<RT: Runtime> LibOS<RT> {
     /// and the file descriptor for this connection.
     ///
     /// This function will panic if the specified future had not completed or is _background_ future.
-    fn take_operation(&mut self, handle: SchedulerHandle) -> (FileDescriptor, OperationResult<RT>) {
+    fn take_operation(
+        &mut self,
+        handle: SchedulerHandle,
+    ) -> (IoQueueDescriptor, OperationResult<RT>) {
         match self.rt.scheduler().take(handle) {
             Operation::Tcp(f) => f.expect_result(),
             Operation::Udp(f) => f.expect_result(),

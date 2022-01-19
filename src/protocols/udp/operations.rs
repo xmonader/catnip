@@ -3,7 +3,7 @@
 
 use super::listener::Listener;
 
-use crate::{fail::Fail, file_table::FileDescriptor, operations::ResultFuture, runtime::Runtime};
+use crate::{fail::Fail, operations::ResultFuture, queue::IoQueueDescriptor, runtime::Runtime};
 
 use crate::{operations::OperationResult, protocols::ipv4};
 
@@ -22,15 +22,15 @@ use std::{
 /// Future for Pop Operation
 pub struct PopFuture<RT: Runtime> {
     /// File descriptor.
-    fd: FileDescriptor,
+    fd: IoQueueDescriptor,
     /// Listener.
     listener: Result<Rc<RefCell<Listener<RT::Buf>>>, Fail>,
 }
 
 /// Operations on UDP Layer
 pub enum UdpOperation<RT: Runtime> {
-    Connect(FileDescriptor, Result<(), Fail>),
-    Push(FileDescriptor, Result<(), Fail>),
+    Connect(IoQueueDescriptor, Result<(), Fail>),
+    Push(IoQueueDescriptor, Result<(), Fail>),
     Pop(ResultFuture<PopFuture<RT>>),
 }
 
@@ -39,7 +39,7 @@ pub enum UdpOperation<RT: Runtime> {
 //==============================================================================
 
 impl<RT: Runtime> UdpOperation<RT> {
-    pub fn expect_result(self) -> (FileDescriptor, OperationResult<RT>) {
+    pub fn expect_result(self) -> (IoQueueDescriptor, OperationResult<RT>) {
         match self {
             UdpOperation::Push(fd, Err(e)) | UdpOperation::Connect(fd, Err(e)) => {
                 (fd, OperationResult::Failed(e))
@@ -64,7 +64,10 @@ impl<RT: Runtime> UdpOperation<RT> {
 /// Associate functions for [PopFuture].
 impl<RT: Runtime> PopFuture<RT> {
     /// Creates a future for the pop operation.
-    pub fn new(fd: FileDescriptor, listener: Result<Rc<RefCell<Listener<RT::Buf>>>, Fail>) -> Self {
+    pub fn new(
+        fd: IoQueueDescriptor,
+        listener: Result<Rc<RefCell<Listener<RT::Buf>>>, Fail>,
+    ) -> Self {
         Self { fd, listener }
     }
 }

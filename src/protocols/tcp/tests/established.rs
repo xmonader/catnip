@@ -4,7 +4,6 @@
 use crate::{
     collections::bytes::{Bytes, BytesMut},
     engine::Engine,
-    file_table::FileDescriptor,
     protocols::{
         ip::{self},
         ipv4::{self},
@@ -17,6 +16,7 @@ use crate::{
             SeqNumber,
         },
     },
+    queue::IoQueueDescriptor,
     runtime::Runtime,
     test_helpers::{self, TestRuntime},
 };
@@ -50,7 +50,7 @@ fn send_data(
     now: &mut Instant,
     receiver: &mut Engine<TestRuntime>,
     sender: &mut Engine<TestRuntime>,
-    sender_fd: FileDescriptor,
+    sender_fd: IoQueueDescriptor,
     window_size: u16,
     seq_no: SeqNumber,
     ack_num: Option<SeqNumber>,
@@ -93,7 +93,7 @@ fn recv_data(
     ctx: &mut Context,
     receiver: &mut Engine<TestRuntime>,
     sender: &mut Engine<TestRuntime>,
-    receiver_fd: FileDescriptor,
+    receiver_fd: IoQueueDescriptor,
     bytes: Bytes,
 ) {
     trace!(
@@ -153,8 +153,8 @@ fn send_recv(
     now: &mut Instant,
     server: &mut Engine<TestRuntime>,
     client: &mut Engine<TestRuntime>,
-    server_fd: FileDescriptor,
-    client_fd: FileDescriptor,
+    server_fd: IoQueueDescriptor,
+    client_fd: IoQueueDescriptor,
     window_size: u16,
     seq_no: SeqNumber,
     bytes: Bytes,
@@ -194,8 +194,8 @@ fn send_recv_round(
     now: &mut Instant,
     server: &mut Engine<TestRuntime>,
     client: &mut Engine<TestRuntime>,
-    server_fd: FileDescriptor,
-    client_fd: FileDescriptor,
+    server_fd: IoQueueDescriptor,
+    client_fd: IoQueueDescriptor,
     window_size: u16,
     seq_no: SeqNumber,
     bytes: Bytes,
@@ -241,8 +241,8 @@ fn connection_hangup(
     now: &mut Instant,
     server: &mut Engine<TestRuntime>,
     client: &mut Engine<TestRuntime>,
-    server_fd: FileDescriptor,
-    client_fd: FileDescriptor,
+    server_fd: IoQueueDescriptor,
+    client_fd: IoQueueDescriptor,
 ) {
     // Send FIN: Client -> Server
     client.close(client_fd).unwrap();
@@ -302,7 +302,7 @@ pub fn test_send_recv_loop() {
         .checked_shl(window_scale as u32)
         .unwrap();
 
-    let (server_fd, client_fd): (FileDescriptor, FileDescriptor) = connection_setup(
+    let (server_fd, client_fd): (IoQueueDescriptor, IoQueueDescriptor) = connection_setup(
         &mut ctx,
         &mut now,
         &mut server,
@@ -348,7 +348,7 @@ pub fn test_send_recv_round_loop() {
         .checked_shl(window_scale as u32)
         .unwrap();
 
-    let (server_fd, client_fd): (FileDescriptor, FileDescriptor) = connection_setup(
+    let (server_fd, client_fd): (IoQueueDescriptor, IoQueueDescriptor) = connection_setup(
         &mut ctx,
         &mut now,
         &mut server,
@@ -397,7 +397,7 @@ pub fn test_send_recv_with_delay() {
         .checked_shl(window_scale as u32)
         .unwrap();
 
-    let (server_fd, client_fd): (FileDescriptor, FileDescriptor) = connection_setup(
+    let (server_fd, client_fd): (IoQueueDescriptor, IoQueueDescriptor) = connection_setup(
         &mut ctx,
         &mut now,
         &mut server,
@@ -480,7 +480,7 @@ fn test_connect_disconnect() {
     let mut server: Engine<TestRuntime> = test_helpers::new_bob2(now);
     let mut client: Engine<TestRuntime> = test_helpers::new_alice2(now);
 
-    let (server_fd, client_fd): (FileDescriptor, FileDescriptor) = connection_setup(
+    let (server_fd, client_fd): (IoQueueDescriptor, IoQueueDescriptor) = connection_setup(
         &mut ctx,
         &mut now,
         &mut server,

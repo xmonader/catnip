@@ -5,7 +5,6 @@ use crate::{
     collections::bytes::{Bytes, BytesMut},
     engine::Engine,
     fail::Fail,
-    file_table::FileDescriptor,
     protocols::{
         ethernet2::{EtherType2, Ethernet2Header, MacAddress},
         ip::{self, Port},
@@ -16,6 +15,7 @@ use crate::{
             SeqNumber,
         },
     },
+    queue::IoQueueDescriptor,
     runtime::{PacketBuf, Runtime, RuntimeBuf},
     test_helpers::{self, TestRuntime},
 };
@@ -51,7 +51,7 @@ fn test_connection_timeout() {
     advance_clock(None, Some(&mut client), &mut now);
 
     // Client: SYN_SENT state at T(1).
-    let (_, mut connect_future, bytes): (FileDescriptor, ConnectFuture<TestRuntime>, Bytes) =
+    let (_, mut connect_future, bytes): (IoQueueDescriptor, ConnectFuture<TestRuntime>, Bytes) =
         connection_setup_listen_syn_sent(&mut client, listen_addr);
 
     // Sanity check packet.
@@ -97,7 +97,7 @@ fn test_refuse_connection_early_rst() {
     advance_clock(Some(&mut server), Some(&mut client), &mut now);
 
     // Client: SYN_SENT state at T(1).
-    let (_, _, bytes): (FileDescriptor, ConnectFuture<TestRuntime>, Bytes) =
+    let (_, _, bytes): (IoQueueDescriptor, ConnectFuture<TestRuntime>, Bytes) =
         connection_setup_listen_syn_sent(&mut client, listen_addr);
 
     // Temper packet.
@@ -162,7 +162,7 @@ fn test_refuse_connection_early_ack() {
     advance_clock(Some(&mut server), Some(&mut client), &mut now);
 
     // Client: SYN_SENT state at T(1).
-    let (_, _, bytes): (FileDescriptor, ConnectFuture<TestRuntime>, Bytes) =
+    let (_, _, bytes): (IoQueueDescriptor, ConnectFuture<TestRuntime>, Bytes) =
         connection_setup_listen_syn_sent(&mut client, listen_addr);
 
     // Temper packet.
@@ -227,7 +227,7 @@ fn test_refuse_connection_missing_syn() {
     advance_clock(Some(&mut server), Some(&mut client), &mut now);
 
     // Client: SYN_SENT state at T(1).
-    let (_, _, bytes): (FileDescriptor, ConnectFuture<TestRuntime>, Bytes) =
+    let (_, _, bytes): (IoQueueDescriptor, ConnectFuture<TestRuntime>, Bytes) =
         connection_setup_listen_syn_sent(&mut client, listen_addr);
 
     // Sanity check packet.
@@ -310,9 +310,9 @@ fn serialize_segment(pkt: TcpSegment<Bytes>) -> Bytes {
 fn connection_setup_listen_syn_sent(
     client: &mut Engine<TestRuntime>,
     listen_addr: ipv4::Endpoint,
-) -> (FileDescriptor, ConnectFuture<TestRuntime>, Bytes) {
+) -> (IoQueueDescriptor, ConnectFuture<TestRuntime>, Bytes) {
     // Issue CONNECT operation.
-    let client_fd: FileDescriptor = client.tcp_socket();
+    let client_fd: IoQueueDescriptor = client.tcp_socket().unwrap();
     let connect_future: ConnectFuture<TestRuntime> = client.tcp_connect(client_fd, listen_addr);
 
     // SYN_SENT state.
@@ -328,7 +328,7 @@ fn connection_setup_closed_listen(
     listen_addr: ipv4::Endpoint,
 ) -> AcceptFuture<TestRuntime> {
     // Issue ACCEPT operation.
-    let socket_fd: u32 = server.tcp_socket();
+    let socket_fd: IoQueueDescriptor = server.tcp_socket().unwrap();
     server.tcp_bind(socket_fd, listen_addr).unwrap();
     server.tcp_listen(socket_fd, 1).unwrap();
     let accept_future: AcceptFuture<TestRuntime> = server.tcp_accept(socket_fd);
@@ -456,7 +456,7 @@ pub fn connection_setup(
     client: &mut Engine<TestRuntime>,
     listen_port: ip::Port,
     listen_addr: ipv4::Endpoint,
-) -> (FileDescriptor, FileDescriptor) {
+) -> (IoQueueDescriptor, IoQueueDescriptor) {
     // Server: LISTEN state at T(0).
     let mut accept_future: AcceptFuture<TestRuntime> =
         connection_setup_closed_listen(server, listen_addr);
@@ -466,7 +466,7 @@ pub fn connection_setup(
 
     // Client: SYN_SENT state at T(1).
     let (client_fd, mut connect_future, mut bytes): (
-        FileDescriptor,
+        IoQueueDescriptor,
         ConnectFuture<TestRuntime>,
         Bytes,
     ) = connection_setup_listen_syn_sent(client, listen_addr);
@@ -538,7 +538,7 @@ fn test_good_connect() {
     let mut server = test_helpers::new_bob2(now);
     let mut client = test_helpers::new_alice2(now);
 
-    let (_, _): (FileDescriptor, FileDescriptor) = connection_setup(
+    let (_, _): (IoQueueDescriptor, IoQueueDescriptor) = connection_setup(
         &mut ctx,
         &mut now,
         &mut server,
