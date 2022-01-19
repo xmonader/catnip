@@ -11,7 +11,7 @@ use self::{
     sender::sender,
 };
 use super::{ControlBlock, State};
-use crate::{file_table::FileDescriptor, runtime::Runtime};
+use crate::{queue::IoQueueDescriptor, runtime::Runtime};
 use futures::channel::mpsc;
 use futures::FutureExt;
 use std::{future::Future, rc::Rc};
@@ -20,8 +20,8 @@ pub type BackgroundFuture<RT> = impl Future<Output = ()>;
 
 pub fn background<RT: Runtime>(
     cb: Rc<ControlBlock<RT>>,
-    fd: FileDescriptor,
-    _dead_socket_tx: mpsc::UnboundedSender<FileDescriptor>,
+    fd: IoQueueDescriptor,
+    _dead_socket_tx: mpsc::UnboundedSender<IoQueueDescriptor>,
 ) -> BackgroundFuture<RT> {
     async move {
         let acknowledger = acknowledger(cb.clone()).fuse();

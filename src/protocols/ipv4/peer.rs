@@ -13,7 +13,7 @@ use crate::{
 use std::{future::Future, net::Ipv4Addr, time::Duration};
 
 #[cfg(test)]
-use crate::file_table::FileDescriptor;
+use crate::queue::IoQueueDescriptor;
 
 pub struct Ipv4Peer<RT: Runtime> {
     rt: RT,
@@ -59,11 +59,11 @@ impl<RT: Runtime> Ipv4Peer<RT> {
 
 #[cfg(test)]
 impl<RT: Runtime> Ipv4Peer<RT> {
-    pub fn tcp_mss(&self, fd: FileDescriptor) -> Result<usize, Fail> {
+    pub fn tcp_mss(&self, fd: IoQueueDescriptor) -> Result<usize, Fail> {
         self.tcp.remote_mss(fd)
     }
 
-    pub fn tcp_rto(&self, fd: FileDescriptor) -> Result<Duration, Fail> {
+    pub fn tcp_rto(&self, fd: IoQueueDescriptor) -> Result<Duration, Fail> {
         self.tcp.current_rto(fd)
     }
 }

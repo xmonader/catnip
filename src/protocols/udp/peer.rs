@@ -10,13 +10,13 @@ use super::{
 
 use crate::{
     fail::Fail,
-    file_table::FileDescriptor,
     protocols::{
         arp,
         ethernet2::frame::{EtherType2, Ethernet2Header},
         ipv4,
         ipv4::datagram::{Ipv4Header, Ipv4Protocol2},
     },
+    queue::IoQueueDescriptor,
     runtime::Runtime,
     scheduler::SchedulerHandle,
 };
@@ -45,7 +45,7 @@ struct UdpPeerInner<RT: Runtime> {
     rt: RT,
     arp: arp::Peer<RT>,
 
-    sockets: HashMap<FileDescriptor, Socket>,
+    sockets: HashMap<IoQueueDescriptor, Socket>,
     bound: HashMap<ipv4::Endpoint, Rc<RefCell<Listener<RT::Buf>>>>,
 
     outgoing: OutgoingSender<RT::Buf>,
@@ -148,7 +148,7 @@ impl<RT: Runtime> UdpPeer<RT> {
     }
 
     /// Opens a UDP socket.
-    pub fn do_socket(&self, fd: FileDescriptor) {
+    pub fn do_socket(&self, fd: IoQueueDescriptor) {
         #[cfg(feature = "profiler")]
         timer!("udp::socket");
 
@@ -167,7 +167,7 @@ impl<RT: Runtime> UdpPeer<RT> {
     }
 
     /// Binds a socket to an endpoint address.
-    pub fn bind(&self, fd: FileDescriptor, addr: ipv4::Endpoint) -> Result<(), Fail> {
+    pub fn bind(&self, fd: IoQueueDescriptor, addr: ipv4::Endpoint) -> Result<(), Fail> {
         #[cfg(feature = "profiler")]
         timer!("udp::bind");
 
@@ -205,14 +205,14 @@ impl<RT: Runtime> UdpPeer<RT> {
     ///
     /// - TODO: we should drop this function because it is meaningless for UDP.
     ///
-    pub fn connect(&self, _fd: FileDescriptor, _addr: ipv4::Endpoint) -> Result<(), Fail> {
+    pub fn connect(&self, _fd: IoQueueDescriptor, _addr: ipv4::Endpoint) -> Result<(), Fail> {
         Err(Fail::Malformed {
             details: "Operation not supported",
         })
     }
 
     /// Closes a UDP socket.
-    pub fn do_close(&self, fd: FileDescriptor) -> Result<(), Fail> {
+    pub fn do_close(&self, fd: IoQueueDescriptor) -> Result<(), Fail> {
         #[cfg(feature = "profiler")]
         timer!("udp::close");
 
@@ -262,7 +262,7 @@ impl<RT: Runtime> UdpPeer<RT> {
     }
 
     /// Pushes data to a socket.
-    pub fn push(&self, fd: FileDescriptor, buf: RT::Buf) -> Result<(), Fail> {
+    pub fn push(&self, fd: IoQueueDescriptor, buf: RT::Buf) -> Result<(), Fail> {
         #[cfg(feature = "profiler")]
         timer!("udp::push");
 
@@ -279,7 +279,12 @@ impl<RT: Runtime> UdpPeer<RT> {
         }
     }
 
-    pub fn pushto(&self, fd: FileDescriptor, buf: RT::Buf, to: ipv4::Endpoint) -> Result<(), Fail> {
+    pub fn pushto(
+        &self,
+        fd: IoQueueDescriptor,
+        buf: RT::Buf,
+        to: ipv4::Endpoint,
+    ) -> Result<(), Fail> {
         #[cfg(feature = "profiler")]
         timer!("udp::pushto");
 
@@ -292,7 +297,7 @@ impl<RT: Runtime> UdpPeer<RT> {
     }
 
     /// Pops data from a socket.
-    pub fn pop(&self, fd: FileDescriptor) -> PopFuture<RT> {
+    pub fn pop(&self, fd: IoQueueDescriptor) -> PopFuture<RT> {
         #[cfg(feature = "profiler")]
         timer!("udp::pop");
 

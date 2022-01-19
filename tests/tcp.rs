@@ -8,10 +8,10 @@
 
 use catnip::{
     fail::Fail,
-    file_table::FileDescriptor,
     interop::dmtr_opcode_t,
     libos::LibOS,
     protocols::{ip, ipv4},
+    queue::IoQueueDescriptor,
     runtime::Runtime,
 };
 
@@ -72,7 +72,7 @@ fn do_tcp_establish_connection(port: u16) {
         let qt = libos.accept(sockfd).unwrap();
         let r = libos.wait(qt);
         assert_eq!(r.qr_opcode, dmtr_opcode_t::DMTR_OPC_ACCEPT);
-        let qd = FileDescriptor::from(unsafe { r.qr_value.ares.qd } as usize);
+        let qd = IoQueueDescriptor::from(unsafe { r.qr_value.ares.qd } as usize);
 
         // Close connection.
         libos.close(qd).unwrap();
@@ -127,7 +127,7 @@ fn do_tcp_push_remote(port: u16) {
         assert_eq!(r.qr_opcode, dmtr_opcode_t::DMTR_OPC_ACCEPT);
 
         // Pop data.
-        let qd = FileDescriptor::from(unsafe { r.qr_value.ares.qd } as usize);
+        let qd = IoQueueDescriptor::from(unsafe { r.qr_value.ares.qd } as usize);
         let qt = libos.pop(qd).unwrap();
         let qr = libos.wait(qt);
         assert_eq!(qr.qr_opcode, dmtr_opcode_t::DMTR_OPC_POP);
@@ -272,7 +272,7 @@ fn do_tcp_bad_bind(port: u16) {
     // Invalid file descriptor.
     let port = ip::Port::try_from(port).unwrap();
     let local = ipv4::Endpoint::new(ALICE_IPV4, port);
-    let e = libos.bind(FileDescriptor::from(0), local).unwrap_err();
+    let e = libos.bind(IoQueueDescriptor::from(0), local).unwrap_err();
     assert_eq!(e, (Fail::BadFileDescriptor {}));
 }
 
@@ -294,7 +294,7 @@ fn do_tcp_bad_listen(port: u16) {
     let local = ipv4::Endpoint::new(ALICE_IPV4, port);
 
     // Invalid file descriptor.
-    let e = libos.listen(FileDescriptor::from(0), 8).unwrap_err();
+    let e = libos.listen(IoQueueDescriptor::from(0), 8).unwrap_err();
     assert_eq!(e, (Fail::BadFileDescriptor {}));
 
     // Invalid backlog length
@@ -325,7 +325,7 @@ fn do_tcp_bad_accept() {
     let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, tx, rx, arp());
 
     // Invalid file descriptor.
-    let e = libos.accept(FileDescriptor::from(0)).unwrap_err();
+    let e = libos.accept(IoQueueDescriptor::from(0)).unwrap_err();
     assert_eq!(e, (Fail::BadFileDescriptor {}));
 }
 
@@ -355,7 +355,7 @@ fn do_tcp_bad_connect(port: u16) {
         let qt = libos.accept(sockfd).unwrap();
         let r = libos.wait(qt);
         assert_eq!(r.qr_opcode, dmtr_opcode_t::DMTR_OPC_ACCEPT);
-        let qd = FileDescriptor::from(unsafe { r.qr_value.ares.qd } as usize);
+        let qd = IoQueueDescriptor::from(unsafe { r.qr_value.ares.qd } as usize);
 
         // Close connection.
         libos.close(qd).unwrap();
@@ -370,7 +370,9 @@ fn do_tcp_bad_connect(port: u16) {
 
         println!("BAD FD");
         // Bad file descriptor.
-        let e = libos.connect(FileDescriptor::from(0), remote).unwrap_err();
+        let e = libos
+            .connect(IoQueueDescriptor::from(0), remote)
+            .unwrap_err();
         assert_eq!(e, (Fail::BadFileDescriptor {}));
 
         println!("BAD endpoint");

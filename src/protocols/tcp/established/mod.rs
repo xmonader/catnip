@@ -12,8 +12,8 @@ pub use self::sender::congestion_ctrl as cc;
 use self::background::background;
 use crate::{
     fail::Fail,
-    file_table::FileDescriptor,
     protocols::{ipv4, tcp::segment::TcpHeader},
+    queue::IoQueueDescriptor,
     runtime::Runtime,
     scheduler::SchedulerHandle,
 };
@@ -33,8 +33,8 @@ pub struct EstablishedSocket<RT: Runtime> {
 impl<RT: Runtime> EstablishedSocket<RT> {
     pub fn new(
         cb: ControlBlock<RT>,
-        fd: FileDescriptor,
-        dead_socket_tx: mpsc::UnboundedSender<FileDescriptor>,
+        fd: IoQueueDescriptor,
+        dead_socket_tx: mpsc::UnboundedSender<IoQueueDescriptor>,
     ) -> Self {
         let cb = Rc::new(cb);
         let future = background(cb.clone(), fd, dead_socket_tx);

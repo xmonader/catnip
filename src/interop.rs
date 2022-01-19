@@ -3,7 +3,7 @@
 
 #![allow(non_camel_case_types)]
 
-use crate::{file_table::FileDescriptor, operations::OperationResult, runtime::Runtime};
+use crate::{operations::OperationResult, queue::IoQueueDescriptor, runtime::Runtime};
 use libc::{c_int, c_void, sockaddr_in};
 use std::mem;
 
@@ -63,7 +63,7 @@ impl dmtr_qresult_t {
     pub fn pack<RT: Runtime>(
         rt: &RT,
         result: OperationResult<RT>,
-        qd: FileDescriptor,
+        qd: IoQueueDescriptor,
         qt: u64,
     ) -> Self {
         match result {

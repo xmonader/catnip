@@ -3,7 +3,6 @@
 
 use crate::{
     fail::Fail,
-    file_table::{File, FileDescriptor, FileTable},
     operations::ResultFuture,
     protocols::{
         arp,
@@ -13,6 +12,7 @@ use crate::{
         udp::{UdpOperation, UdpPopFuture},
         Protocol,
     },
+    queue::{IoQueueDescriptor, IoQueueTable, IoQueueType},
     runtime::Runtime,
     scheduler::Operation,
 };
@@ -31,13 +31,13 @@ pub struct Engine<RT: Runtime> {
     rt: RT,
     arp: arp::Peer<RT>,
     ipv4: ipv4::Peer<RT>,
-    file_table: FileTable,
+    file_table: IoQueueTable,
 }
 
 impl<RT: Runtime> Engine<RT> {
     pub fn new(rt: RT) -> Result<Self, Fail> {
         let now = rt.now();
-        let file_table = FileTable::new();
+        let file_table = IoQueueTable::new();
         let arp = arp::Peer::new(now, rt.clone(), rt.arp_options())?;
         let ipv4 = ipv4::Peer::new(rt.clone(), arp.clone());
         Ok(Engine {
@@ -80,15 +80,15 @@ impl<RT: Runtime> Engine<RT> {
     }
 
     /// Opens a socket.
-    pub fn socket(&mut self, protocol: Protocol) -> Result<FileDescriptor, Fail> {
+    pub fn socket(&mut self, protocol: Protocol) -> Result<IoQueueDescriptor, Fail> {
         match protocol {
             Protocol::Tcp => {
-                let fd = self.file_table.alloc(File::TcpSocket);
+                let fd = self.file_table.alloc(IoQueueType::TcpSocket);
                 self.ipv4.tcp.do_socket(fd);
                 Ok(fd)
             }
             Protocol::Udp => {
-                let fd = self.file_table.alloc(File::UdpSocket);
+                let fd = self.file_table.alloc(IoQueueType::UdpSocket);
                 self.ipv4.udp.do_socket(fd);
                 Ok(fd)
             }
@@ -97,14 +97,14 @@ impl<RT: Runtime> Engine<RT> {
 
     pub fn connect(
         &mut self,
-        fd: FileDescriptor,
+        fd: IoQueueDescriptor,
         remote_endpoint: ipv4::Endpoint,
     ) -> Result<Operation<RT>, Fail> {
         match self.file_table.get(fd) {
-            Some(File::TcpSocket) => {
+            Some(IoQueueType::TcpSocket) => {
                 Ok(Operation::from(self.ipv4.tcp.connect(fd, remote_endpoint)))
             }
-            Some(File::UdpSocket) => {
+            Some(IoQueueType::UdpSocket) => {
                 let udp_op =
                     UdpOperation::<RT>::Connect(fd, self.ipv4.udp.connect(fd, remote_endpoint));
                 Ok(Operation::Udp(udp_op))
@@ -113,36 +113,36 @@ impl<RT: Runtime> Engine<RT> {
         }
     }
 
-    pub fn bind(&mut self, fd: FileDescriptor, endpoint: ipv4::Endpoint) -> Result<(), Fail> {
+    pub fn bind(&mut self, fd: IoQueueDescriptor, endpoint: ipv4::Endpoint) -> Result<(), Fail> {
         match self.file_table.get(fd) {
-            Some(File::TcpSocket) => self.ipv4.tcp.bind(fd, endpoint),
-            Some(File::UdpSocket) => self.ipv4.udp.bind(fd, endpoint),
+            Some(IoQueueType::TcpSocket) => self.ipv4.tcp.bind(fd, endpoint),
+            Some(IoQueueType::UdpSocket) => self.ipv4.udp.bind(fd, endpoint),
             _ => Err(Fail::BadFileDescriptor {}),
         }
     }
 
     /// Accepts an incoming connection.
-    pub fn accept(&mut self, fd: FileDescriptor) -> Result<Operation<RT>, Fail> {
+    pub fn accept(&mut self, fd: IoQueueDescriptor) -> Result<Operation<RT>, Fail> {
         match self.file_table.get(fd) {
-            Some(File::TcpSocket) => {
-                let newfd = self.file_table.alloc(File::TcpSocket);
+            Some(IoQueueType::TcpSocket) => {
+                let newfd = self.file_table.alloc(IoQueueType::TcpSocket);
                 Ok(Operation::from(self.ipv4.tcp.do_accept(fd, newfd)))
             }
             _ => Err(Fail::BadFileDescriptor {}),
         }
     }
 
-    pub fn listen(&mut self, fd: FileDescriptor, backlog: usize) -> Result<(), Fail> {
+    pub fn listen(&mut self, fd: IoQueueDescriptor, backlog: usize) -> Result<(), Fail> {
         match self.file_table.get(fd) {
-            Some(File::TcpSocket) => self.ipv4.tcp.listen(fd, backlog),
+            Some(IoQueueType::TcpSocket) => self.ipv4.tcp.listen(fd, backlog),
             _ => Err(Fail::BadFileDescriptor {}),
         }
     }
 
-    pub fn push(&mut self, fd: FileDescriptor, buf: RT::Buf) -> Result<Operation<RT>, Fail> {
+    pub fn push(&mut self, fd: IoQueueDescriptor, buf: RT::Buf) -> Result<Operation<RT>, Fail> {
         match self.file_table.get(fd) {
-            Some(File::TcpSocket) => Ok(Operation::from(self.ipv4.tcp.push(fd, buf))),
-            Some(File::UdpSocket) => {
+            Some(IoQueueType::TcpSocket) => Ok(Operation::from(self.ipv4.tcp.push(fd, buf))),
+            Some(IoQueueType::UdpSocket) => {
                 let udp_op = UdpOperation::Push(fd, self.ipv4.udp.push(fd, buf));
                 Ok(Operation::Udp(udp_op))
             }
@@ -152,12 +152,12 @@ impl<RT: Runtime> Engine<RT> {
 
     pub fn pushto(
         &mut self,
-        fd: FileDescriptor,
+        fd: IoQueueDescriptor,
         buf: RT::Buf,
         to: ipv4::Endpoint,
     ) -> Result<Operation<RT>, Fail> {
         match self.file_table.get(fd) {
-            Some(File::UdpSocket) => {
+            Some(IoQueueType::UdpSocket) => {
                 let udp_op = UdpOperation::Push(fd, self.ipv4.udp.pushto(fd, buf, to));
                 Ok(Operation::Udp(udp_op))
             }
@@ -165,27 +165,27 @@ impl<RT: Runtime> Engine<RT> {
         }
     }
 
-    pub fn udp_push(&mut self, fd: FileDescriptor, buf: RT::Buf) -> Result<(), Fail> {
+    pub fn udp_push(&mut self, fd: IoQueueDescriptor, buf: RT::Buf) -> Result<(), Fail> {
         self.ipv4.udp.push(fd, buf)
     }
 
     pub fn udp_pushto(
         &self,
-        fd: FileDescriptor,
+        fd: IoQueueDescriptor,
         buf: RT::Buf,
         to: ipv4::Endpoint,
     ) -> Result<(), Fail> {
         self.ipv4.udp.pushto(fd, buf, to)
     }
 
-    pub fn udp_pop(&mut self, fd: FileDescriptor) -> UdpPopFuture<RT> {
+    pub fn udp_pop(&mut self, fd: IoQueueDescriptor) -> UdpPopFuture<RT> {
         self.ipv4.udp.pop(fd)
     }
 
-    pub fn pop(&mut self, fd: FileDescriptor) -> Result<Operation<RT>, Fail> {
+    pub fn pop(&mut self, fd: IoQueueDescriptor) -> Result<Operation<RT>, Fail> {
         match self.file_table.get(fd) {
-            Some(File::TcpSocket) => Ok(Operation::from(self.ipv4.tcp.pop(fd))),
-            Some(File::UdpSocket) => {
+            Some(IoQueueType::TcpSocket) => Ok(Operation::from(self.ipv4.tcp.pop(fd))),
+            Some(IoQueueType::UdpSocket) => {
                 let udp_op = UdpOperation::Pop(ResultFuture::new(self.ipv4.udp.pop(fd)));
                 Ok(Operation::Udp(udp_op))
             }
@@ -193,12 +193,12 @@ impl<RT: Runtime> Engine<RT> {
         }
     }
 
-    pub fn close(&mut self, fd: FileDescriptor) -> Result<(), Fail> {
+    pub fn close(&mut self, fd: IoQueueDescriptor) -> Result<(), Fail> {
         match self.file_table.get(fd) {
-            Some(File::TcpSocket) => {
+            Some(IoQueueType::TcpSocket) => {
                 self.ipv4.tcp.do_close(fd)?;
             }
-            Some(File::UdpSocket) => {
+            Some(IoQueueType::UdpSocket) => {
                 self.ipv4.udp.do_close(fd)?;
             }
             _ => {
@@ -210,29 +210,29 @@ impl<RT: Runtime> Engine<RT> {
         Ok(())
     }
 
-    pub fn udp_socket(&mut self) -> Result<FileDescriptor, Fail> {
-        let fd = self.file_table.alloc(File::UdpSocket);
+    pub fn udp_socket(&mut self) -> Result<IoQueueDescriptor, Fail> {
+        let fd = self.file_table.alloc(IoQueueType::UdpSocket);
         self.ipv4.udp.do_socket(fd);
         Ok(fd)
     }
 
     pub fn udp_bind(
         &mut self,
-        socket_fd: FileDescriptor,
+        socket_fd: IoQueueDescriptor,
         endpoint: ipv4::Endpoint,
     ) -> Result<(), Fail> {
         self.ipv4.udp.bind(socket_fd, endpoint)
     }
 
-    pub fn tcp_socket(&mut self) -> Result<FileDescriptor, Fail> {
-        let fd = self.file_table.alloc(File::TcpSocket);
+    pub fn tcp_socket(&mut self) -> Result<IoQueueDescriptor, Fail> {
+        let fd = self.file_table.alloc(IoQueueType::TcpSocket);
         self.ipv4.tcp.do_socket(fd);
         Ok(fd)
     }
 
     pub fn tcp_connect(
         &mut self,
-        socket_fd: FileDescriptor,
+        socket_fd: IoQueueDescriptor,
         remote_endpoint: ipv4::Endpoint,
     ) -> ConnectFuture<RT> {
         self.ipv4.tcp.connect(socket_fd, remote_endpoint)
@@ -240,30 +240,30 @@ impl<RT: Runtime> Engine<RT> {
 
     pub fn tcp_bind(
         &mut self,
-        socket_fd: FileDescriptor,
+        socket_fd: IoQueueDescriptor,
         endpoint: ipv4::Endpoint,
     ) -> Result<(), Fail> {
         self.ipv4.tcp.bind(socket_fd, endpoint)
     }
 
-    pub fn tcp_accept(&mut self, fd: FileDescriptor) -> AcceptFuture<RT> {
-        let newfd = self.file_table.alloc(File::TcpSocket);
+    pub fn tcp_accept(&mut self, fd: IoQueueDescriptor) -> AcceptFuture<RT> {
+        let newfd = self.file_table.alloc(IoQueueType::TcpSocket);
         self.ipv4.tcp.do_accept(fd, newfd)
     }
 
-    pub fn tcp_push(&mut self, socket_fd: FileDescriptor, buf: RT::Buf) -> PushFuture<RT> {
+    pub fn tcp_push(&mut self, socket_fd: IoQueueDescriptor, buf: RT::Buf) -> PushFuture<RT> {
         self.ipv4.tcp.push(socket_fd, buf)
     }
 
-    pub fn tcp_pop(&mut self, socket_fd: FileDescriptor) -> PopFuture<RT> {
+    pub fn tcp_pop(&mut self, socket_fd: IoQueueDescriptor) -> PopFuture<RT> {
         self.ipv4.tcp.pop(socket_fd)
     }
 
-    pub fn tcp_close(&mut self, socket_fd: FileDescriptor) -> Result<(), Fail> {
+    pub fn tcp_close(&mut self, socket_fd: IoQueueDescriptor) -> Result<(), Fail> {
         self.ipv4.tcp.do_close(socket_fd)
     }
 
-    pub fn tcp_listen(&mut self, socket_fd: FileDescriptor, backlog: usize) -> Result<(), Fail> {
+    pub fn tcp_listen(&mut self, socket_fd: IoQueueDescriptor, backlog: usize) -> Result<(), Fail> {
         self.ipv4.tcp.listen(socket_fd, backlog)
     }
 
@@ -273,12 +273,12 @@ impl<RT: Runtime> Engine<RT> {
     }
 
     #[cfg(test)]
-    pub fn tcp_mss(&self, handle: FileDescriptor) -> Result<usize, Fail> {
+    pub fn tcp_mss(&self, handle: IoQueueDescriptor) -> Result<usize, Fail> {
         self.ipv4.tcp_mss(handle)
     }
 
     #[cfg(test)]
-    pub fn tcp_rto(&self, handle: FileDescriptor) -> Result<Duration, Fail> {
+    pub fn tcp_rto(&self, handle: IoQueueDescriptor) -> Result<Duration, Fail> {
         self.ipv4.tcp_rto(handle)
     }
 

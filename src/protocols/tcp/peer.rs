@@ -7,7 +7,6 @@ use super::{
 };
 use crate::{
     fail::Fail,
-    file_table::FileDescriptor,
     protocols::{
         arp,
         ethernet2::frame::{EtherType2, Ethernet2Header},
@@ -20,6 +19,7 @@ use crate::{
             segment::{TcpHeader, TcpSegment},
         },
     },
+    queue::IoQueueDescriptor,
     runtime::Runtime,
     runtime::RuntimeBuf,
 };
@@ -58,7 +58,7 @@ pub struct Inner<RT: Runtime> {
     ephemeral_ports: EphemeralPorts,
 
     // FD -> local port
-    sockets: HashMap<FileDescriptor, Socket>,
+    sockets: HashMap<IoQueueDescriptor, Socket>,
 
     passive: HashMap<ipv4::Endpoint, PassiveSocket<RT>>,
     connecting: HashMap<(ipv4::Endpoint, ipv4::Endpoint), ActiveOpenSocket<RT>>,
@@ -67,7 +67,7 @@ pub struct Inner<RT: Runtime> {
     rt: RT,
     arp: arp::Peer<RT>,
 
-    dead_socket_tx: mpsc::UnboundedSender<FileDescriptor>,
+    dead_socket_tx: mpsc::UnboundedSender<IoQueueDescriptor>,
 }
 
 pub struct Peer<RT: Runtime> {
@@ -82,7 +82,7 @@ impl<RT: Runtime> Peer<RT> {
     }
 
     /// Opens a TCP socket.
-    pub fn do_socket(&self, fd: FileDescriptor) {
+    pub fn do_socket(&self, fd: IoQueueDescriptor) {
         #[cfg(feature = "profiler")]
         timer!("tcp::socket");
 
@@ -99,7 +99,7 @@ impl<RT: Runtime> Peer<RT> {
         inner.sockets.insert(fd, socket);
     }
 
-    pub fn bind(&self, fd: FileDescriptor, addr: ipv4::Endpoint) -> Result<(), Fail> {
+    pub fn bind(&self, fd: IoQueueDescriptor, addr: ipv4::Endpoint) -> Result<(), Fail> {
         let mut inner = self.inner.borrow_mut();
         if addr.port() >= ip::Port::first_private_port() {
             return Err(Fail::Malformed {
@@ -121,7 +121,7 @@ impl<RT: Runtime> Peer<RT> {
         self.inner.borrow_mut().receive(ip_header, buf)
     }
 
-    pub fn listen(&self, fd: FileDescriptor, backlog: usize) -> Result<(), Fail> {
+    pub fn listen(&self, fd: IoQueueDescriptor, backlog: usize) -> Result<(), Fail> {
         let mut inner = self.inner.borrow_mut();
         let local = match inner.sockets.get_mut(&fd) {
             Some(Socket::Inactive { local: Some(local) }) => *local,
@@ -145,7 +145,7 @@ impl<RT: Runtime> Peer<RT> {
     }
 
     /// Accepts an incoming connection.
-    pub fn do_accept(&self, fd: FileDescriptor, newfd: FileDescriptor) -> AcceptFuture<RT> {
+    pub fn do_accept(&self, fd: IoQueueDescriptor, newfd: IoQueueDescriptor) -> AcceptFuture<RT> {
         AcceptFuture {
             fd,
             newfd,
@@ -156,10 +156,10 @@ impl<RT: Runtime> Peer<RT> {
     /// Handles an incoming connection.
     pub fn poll_accept(
         &self,
-        fd: FileDescriptor,
-        newfd: FileDescriptor,
+        fd: IoQueueDescriptor,
+        newfd: IoQueueDescriptor,
         ctx: &mut Context,
-    ) -> Poll<Result<FileDescriptor, Fail>> {
+    ) -> Poll<Result<IoQueueDescriptor, Fail>> {
         let mut inner_ = self.inner.borrow_mut();
         let inner = &mut *inner_;
 
@@ -194,7 +194,7 @@ impl<RT: Runtime> Peer<RT> {
         Poll::Ready(Ok(newfd))
     }
 
-    pub fn connect(&self, fd: FileDescriptor, remote: ipv4::Endpoint) -> ConnectFuture<RT> {
+    pub fn connect(&self, fd: IoQueueDescriptor, remote: ipv4::Endpoint) -> ConnectFuture<RT> {
         let mut inner = self.inner.borrow_mut();
 
         let r = try {
@@ -235,7 +235,11 @@ impl<RT: Runtime> Peer<RT> {
         }
     }
 
-    pub fn poll_recv(&self, fd: FileDescriptor, ctx: &mut Context) -> Poll<Result<RT::Buf, Fail>> {
+    pub fn poll_recv(
+        &self,
+        fd: IoQueueDescriptor,
+        ctx: &mut Context,
+    ) -> Poll<Result<RT::Buf, Fail>> {
         let inner = self.inner.borrow_mut();
         let key = match inner.sockets.get(&fd) {
             Some(Socket::Established { local, remote }) => (*local, *remote),
@@ -264,7 +268,7 @@ impl<RT: Runtime> Peer<RT> {
         }
     }
 
-    pub fn push(&self, fd: FileDescriptor, buf: RT::Buf) -> PushFuture<RT> {
+    pub fn push(&self, fd: IoQueueDescriptor, buf: RT::Buf) -> PushFuture<RT> {
         let err = match self.send(fd, buf) {
             Ok(()) => None,
             Err(e) => Some(e),
@@ -276,14 +280,14 @@ impl<RT: Runtime> Peer<RT> {
         }
     }
 
-    pub fn pop(&self, fd: FileDescriptor) -> PopFuture<RT> {
+    pub fn pop(&self, fd: IoQueueDescriptor) -> PopFuture<RT> {
         PopFuture {
             fd,
             inner: self.inner.clone(),
         }
     }
 
-    fn send(&self, fd: FileDescriptor, buf: RT::Buf) -> Result<(), Fail> {
+    fn send(&self, fd: IoQueueDescriptor, buf: RT::Buf) -> Result<(), Fail> {
         let inner = self.inner.borrow_mut();
         let key = match inner.sockets.get(&fd) {
             Some(Socket::Established { local, remote }) => (*local, *remote),
@@ -303,7 +307,7 @@ impl<RT: Runtime> Peer<RT> {
     }
 
     /// Closes a TCP socket.
-    pub fn do_close(&self, fd: FileDescriptor) -> Result<(), Fail> {
+    pub fn do_close(&self, fd: IoQueueDescriptor) -> Result<(), Fail> {
         let inner = self.inner.borrow_mut();
 
         match inner.sockets.get(&fd) {
@@ -330,7 +334,7 @@ impl<RT: Runtime> Peer<RT> {
         Ok(())
     }
 
-    pub fn remote_mss(&self, fd: FileDescriptor) -> Result<usize, Fail> {
+    pub fn remote_mss(&self, fd: IoQueueDescriptor) -> Result<usize, Fail> {
         let inner = self.inner.borrow();
         let key = match inner.sockets.get(&fd) {
             Some(Socket::Established { local, remote }) => (*local, *remote),
@@ -349,7 +353,7 @@ impl<RT: Runtime> Peer<RT> {
         }
     }
 
-    pub fn current_rto(&self, fd: FileDescriptor) -> Result<Duration, Fail> {
+    pub fn current_rto(&self, fd: IoQueueDescriptor) -> Result<Duration, Fail> {
         let inner = self.inner.borrow();
         let key = match inner.sockets.get(&fd) {
             Some(Socket::Established { local, remote }) => (*local, *remote),
@@ -368,7 +372,10 @@ impl<RT: Runtime> Peer<RT> {
         }
     }
 
-    pub fn endpoints(&self, fd: FileDescriptor) -> Result<(ipv4::Endpoint, ipv4::Endpoint), Fail> {
+    pub fn endpoints(
+        &self,
+        fd: IoQueueDescriptor,
+    ) -> Result<(ipv4::Endpoint, ipv4::Endpoint), Fail> {
         let inner = self.inner.borrow();
         let key = match inner.sockets.get(&fd) {
             Some(Socket::Established { local, remote }) => (*local, *remote),
@@ -392,8 +399,8 @@ impl<RT: Runtime> Inner<RT> {
     fn new(
         rt: RT,
         arp: arp::Peer<RT>,
-        dead_socket_tx: mpsc::UnboundedSender<FileDescriptor>,
-        _dead_socket_rx: mpsc::UnboundedReceiver<FileDescriptor>,
+        dead_socket_tx: mpsc::UnboundedSender<IoQueueDescriptor>,
+        _dead_socket_rx: mpsc::UnboundedReceiver<IoQueueDescriptor>,
     ) -> Self {
         Self {
             isn_generator: IsnGenerator::new(rt.rng_gen()),
@@ -475,7 +482,7 @@ impl<RT: Runtime> Inner<RT> {
 
     pub(super) fn poll_connect_finished(
         &mut self,
-        fd: FileDescriptor,
+        fd: IoQueueDescriptor,
         context: &mut Context,
     ) -> Poll<Result<(), Fail>> {
         let key = match self.sockets.get(&fd) {
