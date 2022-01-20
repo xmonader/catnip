@@ -7,7 +7,7 @@
 use crate::{
     engine::Engine,
     fail::Fail,
-    futures::operation::FutureOperation,
+    futures::{operation::FutureOperation, FutureResult},
     interop::{dmtr_qresult_t, dmtr_sgarray_t},
     operations::OperationResult,
     protocols::{
@@ -368,7 +368,15 @@ impl<RT: Runtime> LibOS<RT> {
 
         trace!("pop(): fd={:?}", fd);
 
-        let future = self.engine.pop(fd)?;
+        let future = match self.engine.file_table.get(fd) {
+            Some(IoQueueType::TcpSocket) => Ok(FutureOperation::from(self.engine.ipv4.tcp.pop(fd))),
+            Some(IoQueueType::UdpSocket) => {
+                let udp_op =
+                    UdpOperation::Pop(FutureResult::new(self.engine.ipv4.udp.pop(fd), None));
+                Ok(FutureOperation::Udp(udp_op))
+            }
+            _ => Err(Fail::BadFileDescriptor {}),
+        }?;
 
         Ok(self.rt.scheduler().insert(future).into_raw())
     }

@@ -3,14 +3,12 @@
 
 use crate::{
     fail::Fail,
-    futures::operation::FutureOperation,
-    futures::result::FutureResult,
     protocols::{
         arp,
         ethernet2::frame::{EtherType2, Ethernet2Header},
         ipv4,
         tcp::operations::{AcceptFuture, ConnectFuture, PopFuture, PushFuture},
-        udp::{UdpOperation, UdpPopFuture},
+        udp::UdpPopFuture,
     },
     queue::{IoQueueDescriptor, IoQueueTable, IoQueueType},
     runtime::Runtime,
@@ -93,17 +91,6 @@ impl<RT: Runtime> Engine<RT> {
 
     pub fn udp_pop(&mut self, fd: IoQueueDescriptor) -> UdpPopFuture<RT> {
         self.ipv4.udp.pop(fd)
-    }
-
-    pub fn pop(&mut self, fd: IoQueueDescriptor) -> Result<FutureOperation<RT>, Fail> {
-        match self.file_table.get(fd) {
-            Some(IoQueueType::TcpSocket) => Ok(FutureOperation::from(self.ipv4.tcp.pop(fd))),
-            Some(IoQueueType::UdpSocket) => {
-                let udp_op = UdpOperation::Pop(FutureResult::new(self.ipv4.udp.pop(fd), None));
-                Ok(FutureOperation::Udp(udp_op))
-            }
-            _ => Err(Fail::BadFileDescriptor {}),
-        }
     }
 
     pub fn udp_socket(&mut self) -> Result<IoQueueDescriptor, Fail> {
