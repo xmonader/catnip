@@ -10,7 +10,7 @@ use crate::{
     futures::operation::FutureOperation,
     interop::{dmtr_qresult_t, dmtr_sgarray_t},
     operations::OperationResult,
-    protocols::ipv4::Endpoint,
+    protocols::{ipv4::Endpoint, udp::UdpOperation},
     queue::{IoQueueDescriptor, IoQueueType},
     runtime::Runtime,
     scheduler::SchedulerHandle,
@@ -190,7 +190,18 @@ impl<RT: Runtime> LibOS<RT> {
         #[cfg(feature = "profiler")]
         timer!("catnip::connect");
         trace!("connect(): fd={:?} remote={:?}", fd, remote);
-        let future = self.engine.connect(fd, remote)?;
+        let future = match self.engine.file_table.get(fd) {
+            Some(IoQueueType::TcpSocket) => Ok(FutureOperation::from(
+                self.engine.ipv4.tcp.connect(fd, remote),
+            )),
+            Some(IoQueueType::UdpSocket) => {
+                let udp_op =
+                    UdpOperation::<RT>::Connect(fd, self.engine.ipv4.udp.connect(fd, remote));
+                Ok(FutureOperation::Udp(udp_op))
+            }
+            _ => Err(Fail::BadFileDescriptor {}),
+        }?;
+
         Ok(self.rt.scheduler().insert(future).into_raw())
     }
 

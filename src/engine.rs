@@ -78,24 +78,6 @@ impl<RT: Runtime> Engine<RT> {
         self.ipv4.ping(dest_ipv4_addr, timeout)
     }
 
-    pub fn connect(
-        &mut self,
-        fd: IoQueueDescriptor,
-        remote_endpoint: ipv4::Endpoint,
-    ) -> Result<FutureOperation<RT>, Fail> {
-        match self.file_table.get(fd) {
-            Some(IoQueueType::TcpSocket) => Ok(FutureOperation::from(
-                self.ipv4.tcp.connect(fd, remote_endpoint),
-            )),
-            Some(IoQueueType::UdpSocket) => {
-                let udp_op =
-                    UdpOperation::<RT>::Connect(fd, self.ipv4.udp.connect(fd, remote_endpoint));
-                Ok(FutureOperation::Udp(udp_op))
-            }
-            _ => Err(Fail::BadFileDescriptor {}),
-        }
-    }
-
     /// Accepts an incoming connection.
     pub fn accept(&mut self, fd: IoQueueDescriptor) -> Result<FutureOperation<RT>, Fail> {
         match self.file_table.get(fd) {
