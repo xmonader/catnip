@@ -11,8 +11,7 @@ use crate::{
     interop::{dmtr_qresult_t, dmtr_sgarray_t},
     operations::OperationResult,
     protocols::ipv4::Endpoint,
-    protocols::Protocol,
-    queue::IoQueueDescriptor,
+    queue::{IoQueueDescriptor, IoQueueType},
     runtime::Runtime,
     scheduler::SchedulerHandle,
 };
@@ -85,12 +84,19 @@ impl<RT: Runtime> LibOS<RT> {
         if domain != libc::AF_INET {
             return Err(Fail::AddressFamilySupport {});
         }
-        let engine_protocol = match socket_type {
-            libc::SOCK_STREAM => Protocol::Tcp,
-            libc::SOCK_DGRAM => Protocol::Udp,
-            _ => return Err(Fail::SocketTypeSupport {}),
-        };
-        self.engine.socket(engine_protocol)
+        match socket_type {
+            libc::SOCK_STREAM => {
+                let qd = self.engine.file_table.alloc(IoQueueType::TcpSocket);
+                self.engine.ipv4.tcp.do_socket(qd);
+                Ok(qd)
+            }
+            libc::SOCK_DGRAM => {
+                let qd = self.engine.file_table.alloc(IoQueueType::UdpSocket);
+                self.engine.ipv4.udp.do_socket(qd);
+                Ok(qd)
+            }
+            _ => Err(Fail::SocketTypeSupport {}),
+        }
     }
 
     ///

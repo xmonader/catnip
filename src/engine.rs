@@ -11,7 +11,6 @@ use crate::{
         ipv4,
         tcp::operations::{AcceptFuture, ConnectFuture, PopFuture, PushFuture},
         udp::{UdpOperation, UdpPopFuture},
-        Protocol,
     },
     queue::{IoQueueDescriptor, IoQueueTable, IoQueueType},
     runtime::Runtime,
@@ -29,9 +28,9 @@ use std::collections::HashMap;
 // TODO: Unclear why this itermediate `Engine` struct is needed.
 pub struct Engine<RT: Runtime> {
     rt: RT,
-    arp: arp::Peer<RT>,
-    ipv4: ipv4::Peer<RT>,
-    file_table: IoQueueTable,
+    pub arp: arp::Peer<RT>,
+    pub ipv4: ipv4::Peer<RT>,
+    pub file_table: IoQueueTable,
 }
 
 impl<RT: Runtime> Engine<RT> {
@@ -77,22 +76,6 @@ impl<RT: Runtime> Engine<RT> {
         timeout: Option<Duration>,
     ) -> impl Future<Output = Result<Duration, Fail>> {
         self.ipv4.ping(dest_ipv4_addr, timeout)
-    }
-
-    /// Opens a socket.
-    pub fn socket(&mut self, protocol: Protocol) -> Result<IoQueueDescriptor, Fail> {
-        match protocol {
-            Protocol::Tcp => {
-                let fd = self.file_table.alloc(IoQueueType::TcpSocket);
-                self.ipv4.tcp.do_socket(fd);
-                Ok(fd)
-            }
-            Protocol::Udp => {
-                let fd = self.file_table.alloc(IoQueueType::UdpSocket);
-                self.ipv4.udp.do_socket(fd);
-                Ok(fd)
-            }
-        }
     }
 
     pub fn connect(
