@@ -107,13 +107,6 @@ impl<RT: Runtime> Engine<RT> {
         }
     }
 
-    pub fn listen(&mut self, fd: IoQueueDescriptor, backlog: usize) -> Result<(), Fail> {
-        match self.file_table.get(fd) {
-            Some(IoQueueType::TcpSocket) => self.ipv4.tcp.listen(fd, backlog),
-            _ => Err(Fail::BadFileDescriptor {}),
-        }
-    }
-
     pub fn push(
         &mut self,
         fd: IoQueueDescriptor,

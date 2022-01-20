@@ -146,7 +146,10 @@ impl<RT: Runtime> LibOS<RT> {
                 details: "backlog length",
             });
         }
-        self.engine.listen(fd, backlog)
+        match self.engine.file_table.get(fd) {
+            Some(IoQueueType::TcpSocket) => self.engine.ipv4.tcp.listen(fd, backlog),
+            _ => Err(Fail::BadFileDescriptor {}),
+        }
     }
 
     ///
