@@ -165,23 +165,6 @@ impl<RT: Runtime> Engine<RT> {
         }
     }
 
-    pub fn close(&mut self, fd: IoQueueDescriptor) -> Result<(), Fail> {
-        match self.file_table.get(fd) {
-            Some(IoQueueType::TcpSocket) => {
-                self.ipv4.tcp.do_close(fd)?;
-            }
-            Some(IoQueueType::UdpSocket) => {
-                self.ipv4.udp.do_close(fd)?;
-            }
-            _ => {
-                return Err(Fail::BadFileDescriptor {});
-            }
-        }
-
-        self.file_table.free(fd);
-        Ok(())
-    }
-
     pub fn udp_socket(&mut self) -> Result<IoQueueDescriptor, Fail> {
         let fd = self.file_table.alloc(IoQueueType::UdpSocket);
         self.ipv4.udp.do_socket(fd);

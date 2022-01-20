@@ -208,7 +208,22 @@ impl<RT: Runtime> LibOS<RT> {
         #[cfg(feature = "profiler")]
         timer!("catnip::close");
         trace!("close(): fd={:?}", fd);
-        self.engine.close(fd)
+
+        match self.engine.file_table.get(fd) {
+            Some(IoQueueType::TcpSocket) => {
+                self.engine.ipv4.tcp.do_close(fd)?;
+            }
+            Some(IoQueueType::UdpSocket) => {
+                self.engine.ipv4.udp.do_close(fd)?;
+            }
+            _ => {
+                return Err(Fail::BadFileDescriptor {});
+            }
+        }
+
+        self.engine.file_table.free(fd);
+
+        Ok(())
     }
 
     /// Create a push request for Demikernel to asynchronously write data from `sga` to the
