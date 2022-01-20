@@ -26,7 +26,7 @@ extern crate log;
 extern crate derive_more;
 
 pub mod collections;
-pub mod engine;
+mod engine;
 pub mod fail;
 pub mod futures;
 pub mod interop;
