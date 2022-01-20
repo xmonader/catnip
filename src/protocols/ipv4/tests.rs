@@ -20,7 +20,7 @@ fn ipv4_ping() {
     let mut bob = test_helpers::new_bob2(now);
 
     // Alice pings Bob.
-    let mut ping_fut = Box::pin(alice.ping(test_helpers::BOB_IPV4, None));
+    let mut ping_fut = Box::pin(alice.ipv4_ping(test_helpers::BOB_IPV4, None));
     must_let!(let _ = Future::poll(Pin::new(&mut ping_fut), &mut ctx));
 
     now += Duration::from_secs(1);
@@ -55,7 +55,7 @@ fn ipv4_ping_loop() {
 
     for _ in 1..1000 {
         // Alice pings Bob.
-        let mut ping_fut = Box::pin(alice.ping(test_helpers::BOB_IPV4, None));
+        let mut ping_fut = Box::pin(alice.ipv4_ping(test_helpers::BOB_IPV4, None));
         must_let!(let _ = Future::poll(Pin::new(&mut ping_fut), &mut ctx));
 
         now += Duration::from_secs(1);

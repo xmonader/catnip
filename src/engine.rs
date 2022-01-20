@@ -68,7 +68,7 @@ impl<RT: Runtime> Engine<RT> {
         }
     }
 
-    pub fn ping(
+    pub fn ipv4_ping(
         &mut self,
         dest_ipv4_addr: Ipv4Addr,
         timeout: Option<Duration>,
