@@ -114,7 +114,11 @@ impl<RT: Runtime> LibOS<RT> {
         #[cfg(feature = "profiler")]
         timer!("catnip::bind");
         trace!("bind(): fd={:?} local={:?}", fd, local);
-        self.engine.bind(fd, local)
+        match self.engine.file_table.get(fd) {
+            Some(IoQueueType::TcpSocket) => self.engine.ipv4.tcp.bind(fd, local),
+            Some(IoQueueType::UdpSocket) => self.engine.ipv4.udp.bind(fd, local),
+            _ => Err(Fail::BadFileDescriptor {}),
+        }
     }
 
     ///

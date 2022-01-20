@@ -96,14 +96,6 @@ impl<RT: Runtime> Engine<RT> {
         }
     }
 
-    pub fn bind(&mut self, fd: IoQueueDescriptor, endpoint: ipv4::Endpoint) -> Result<(), Fail> {
-        match self.file_table.get(fd) {
-            Some(IoQueueType::TcpSocket) => self.ipv4.tcp.bind(fd, endpoint),
-            Some(IoQueueType::UdpSocket) => self.ipv4.udp.bind(fd, endpoint),
-            _ => Err(Fail::BadFileDescriptor {}),
-        }
-    }
-
     /// Accepts an incoming connection.
     pub fn accept(&mut self, fd: IoQueueDescriptor) -> Result<FutureOperation<RT>, Fail> {
         match self.file_table.get(fd) {
