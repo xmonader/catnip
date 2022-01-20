@@ -3,7 +3,6 @@
 
 use crate::{
     collections::bytes::{Bytes, BytesMut},
-    engine::Engine,
     fail::Fail,
     protocols::{
         ethernet2::{EtherType2, Ethernet2Header, MacAddress},
@@ -17,6 +16,7 @@ use crate::{
     },
     queue::IoQueueDescriptor,
     runtime::{PacketBuf, Runtime, RuntimeBuf},
+    test_helpers::Engine,
     test_helpers::{self, TestRuntime},
 };
 use futures::task::noop_waker_ref;

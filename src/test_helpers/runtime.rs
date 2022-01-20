@@ -3,13 +3,13 @@
 
 use crate::{
     collections::bytes::{Bytes, BytesMut},
-    engine::Engine,
     futures::operation::FutureOperation,
     interop::{dmtr_sgarray_t, dmtr_sgaseg_t},
     logging,
     protocols::{arp, ethernet2::MacAddress, tcp, udp},
     runtime::{PacketBuf, Runtime, RECEIVE_BATCH_SIZE},
     scheduler::{Scheduler, SchedulerHandle},
+    test_helpers::Engine,
     timer::{Timer, TimerRc},
 };
 use arrayvec::ArrayVec;

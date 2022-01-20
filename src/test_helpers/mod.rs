@@ -1,14 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+pub mod engine;
 pub mod runtime;
 
+pub use engine::Engine;
 pub use runtime::TestRuntime;
 
-use crate::{
-    engine::Engine,
-    protocols::{arp, ethernet2::MacAddress, tcp, udp},
-};
+use crate::protocols::{arp, ethernet2::MacAddress, tcp, udp};
 use std::{
     collections::HashMap,
     net::Ipv4Addr,

@@ -3,7 +3,6 @@
 
 use crate::{
     collections::bytes::{Bytes, BytesMut},
-    engine::Engine,
     protocols::{
         ip::{self},
         ipv4::{self},
@@ -18,6 +17,7 @@ use crate::{
     },
     queue::IoQueueDescriptor,
     runtime::Runtime,
+    test_helpers::Engine,
     test_helpers::{self, TestRuntime},
 };
 use futures::task::noop_waker_ref;

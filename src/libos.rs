@@ -5,16 +5,17 @@
 //! the IO Queue abstraction, thus providing a standard interface for different kernel bypass
 //! mechanisms.
 use crate::{
-    engine::Engine,
     fail::Fail,
     futures::{operation::FutureOperation, FutureResult},
     interop::{dmtr_qresult_t, dmtr_sgarray_t},
     operations::OperationResult,
     protocols::{
+        arp,
+        ethernet2::{EtherType2, Ethernet2Header},
         ipv4::{self, Endpoint},
         udp::UdpOperation,
     },
-    queue::{IoQueueDescriptor, IoQueueType},
+    queue::{IoQueueDescriptor, IoQueueTable, IoQueueType},
     runtime::Runtime,
     scheduler::SchedulerHandle,
 };
@@ -32,16 +33,23 @@ const MAX_RECV_ITERS: usize = 2;
 pub type QToken = u64;
 
 pub struct LibOS<RT: Runtime> {
-    engine: Engine<RT>,
+    arp: arp::Peer<RT>,
+    ipv4: ipv4::Peer<RT>,
+    file_table: IoQueueTable,
     rt: RT,
     ts_iters: usize,
 }
 
 impl<RT: Runtime> LibOS<RT> {
     pub fn new(rt: RT) -> Result<Self, Fail> {
-        let engine = Engine::new(rt.clone())?;
+        let now = rt.now();
+        let file_table = IoQueueTable::new();
+        let arp = arp::Peer::new(now, rt.clone(), rt.arp_options())?;
+        let ipv4 = ipv4::Peer::new(rt.clone(), arp.clone());
         Ok(Self {
-            engine,
+            arp,
+            ipv4,
+            file_table,
             rt,
             ts_iters: 0,
         })
@@ -89,13 +97,13 @@ impl<RT: Runtime> LibOS<RT> {
         }
         match socket_type {
             libc::SOCK_STREAM => {
-                let qd = self.engine.file_table.alloc(IoQueueType::TcpSocket);
-                self.engine.ipv4.tcp.do_socket(qd);
+                let qd = self.file_table.alloc(IoQueueType::TcpSocket);
+                self.ipv4.tcp.do_socket(qd);
                 Ok(qd)
             }
             libc::SOCK_DGRAM => {
-                let qd = self.engine.file_table.alloc(IoQueueType::UdpSocket);
-                self.engine.ipv4.udp.do_socket(qd);
+                let qd = self.file_table.alloc(IoQueueType::UdpSocket);
+                self.ipv4.udp.do_socket(qd);
                 Ok(qd)
             }
             _ => Err(Fail::SocketTypeSupport {}),
@@ -117,9 +125,9 @@ impl<RT: Runtime> LibOS<RT> {
         #[cfg(feature = "profiler")]
         timer!("catnip::bind");
         trace!("bind(): fd={:?} local={:?}", fd, local);
-        match self.engine.file_table.get(fd) {
-            Some(IoQueueType::TcpSocket) => self.engine.ipv4.tcp.bind(fd, local),
-            Some(IoQueueType::UdpSocket) => self.engine.ipv4.udp.bind(fd, local),
+        match self.file_table.get(fd) {
+            Some(IoQueueType::TcpSocket) => self.ipv4.tcp.bind(fd, local),
+            Some(IoQueueType::UdpSocket) => self.ipv4.udp.bind(fd, local),
             _ => Err(Fail::BadFileDescriptor {}),
         }
     }
@@ -149,8 +157,8 @@ impl<RT: Runtime> LibOS<RT> {
                 details: "backlog length",
             });
         }
-        match self.engine.file_table.get(fd) {
-            Some(IoQueueType::TcpSocket) => self.engine.ipv4.tcp.listen(fd, backlog),
+        match self.file_table.get(fd) {
+            Some(IoQueueType::TcpSocket) => self.ipv4.tcp.listen(fd, backlog),
             _ => Err(Fail::BadFileDescriptor {}),
         }
     }
@@ -171,12 +179,10 @@ impl<RT: Runtime> LibOS<RT> {
         #[cfg(feature = "profiler")]
         timer!("catnip::accept");
         trace!("accept(): {:?}", fd);
-        let r = match self.engine.file_table.get(fd) {
+        let r = match self.file_table.get(fd) {
             Some(IoQueueType::TcpSocket) => {
-                let newfd = self.engine.file_table.alloc(IoQueueType::TcpSocket);
-                Ok(FutureOperation::from(
-                    self.engine.ipv4.tcp.do_accept(fd, newfd),
-                ))
+                let newfd = self.file_table.alloc(IoQueueType::TcpSocket);
+                Ok(FutureOperation::from(self.ipv4.tcp.do_accept(fd, newfd)))
             }
             _ => Err(Fail::BadFileDescriptor {}),
         };
@@ -202,13 +208,12 @@ impl<RT: Runtime> LibOS<RT> {
         #[cfg(feature = "profiler")]
         timer!("catnip::connect");
         trace!("connect(): fd={:?} remote={:?}", fd, remote);
-        let future = match self.engine.file_table.get(fd) {
-            Some(IoQueueType::TcpSocket) => Ok(FutureOperation::from(
-                self.engine.ipv4.tcp.connect(fd, remote),
-            )),
+        let future = match self.file_table.get(fd) {
+            Some(IoQueueType::TcpSocket) => {
+                Ok(FutureOperation::from(self.ipv4.tcp.connect(fd, remote)))
+            }
             Some(IoQueueType::UdpSocket) => {
-                let udp_op =
-                    UdpOperation::<RT>::Connect(fd, self.engine.ipv4.udp.connect(fd, remote));
+                let udp_op = UdpOperation::<RT>::Connect(fd, self.ipv4.udp.connect(fd, remote));
                 Ok(FutureOperation::Udp(udp_op))
             }
             _ => Err(Fail::BadFileDescriptor {}),
@@ -232,19 +237,19 @@ impl<RT: Runtime> LibOS<RT> {
         timer!("catnip::close");
         trace!("close(): fd={:?}", fd);
 
-        match self.engine.file_table.get(fd) {
+        match self.file_table.get(fd) {
             Some(IoQueueType::TcpSocket) => {
-                self.engine.ipv4.tcp.do_close(fd)?;
+                self.ipv4.tcp.do_close(fd)?;
             }
             Some(IoQueueType::UdpSocket) => {
-                self.engine.ipv4.udp.do_close(fd)?;
+                self.ipv4.udp.do_close(fd)?;
             }
             _ => {
                 return Err(Fail::BadFileDescriptor {});
             }
         }
 
-        self.engine.file_table.free(fd);
+        self.file_table.free(fd);
 
         Ok(())
     }
@@ -254,12 +259,10 @@ impl<RT: Runtime> LibOS<RT> {
         fd: IoQueueDescriptor,
         buf: RT::Buf,
     ) -> Result<FutureOperation<RT>, Fail> {
-        match self.engine.file_table.get(fd) {
-            Some(IoQueueType::TcpSocket) => {
-                Ok(FutureOperation::from(self.engine.ipv4.tcp.push(fd, buf)))
-            }
+        match self.file_table.get(fd) {
+            Some(IoQueueType::TcpSocket) => Ok(FutureOperation::from(self.ipv4.tcp.push(fd, buf))),
             Some(IoQueueType::UdpSocket) => {
-                let udp_op = UdpOperation::Push(fd, self.engine.ipv4.udp.push(fd, buf));
+                let udp_op = UdpOperation::Push(fd, self.ipv4.udp.push(fd, buf));
                 Ok(FutureOperation::Udp(udp_op))
             }
             _ => Err(Fail::BadFileDescriptor {}),
@@ -304,9 +307,9 @@ impl<RT: Runtime> LibOS<RT> {
         buf: RT::Buf,
         to: ipv4::Endpoint,
     ) -> Result<FutureOperation<RT>, Fail> {
-        match self.engine.file_table.get(fd) {
+        match self.file_table.get(fd) {
             Some(IoQueueType::UdpSocket) => {
-                let udp_op = UdpOperation::Push(fd, self.engine.ipv4.udp.pushto(fd, buf, to));
+                let udp_op = UdpOperation::Push(fd, self.ipv4.udp.pushto(fd, buf, to));
                 Ok(FutureOperation::Udp(udp_op))
             }
             _ => Err(Fail::BadFileDescriptor {}),
@@ -368,11 +371,10 @@ impl<RT: Runtime> LibOS<RT> {
 
         trace!("pop(): fd={:?}", fd);
 
-        let future = match self.engine.file_table.get(fd) {
-            Some(IoQueueType::TcpSocket) => Ok(FutureOperation::from(self.engine.ipv4.tcp.pop(fd))),
+        let future = match self.file_table.get(fd) {
+            Some(IoQueueType::TcpSocket) => Ok(FutureOperation::from(self.ipv4.tcp.pop(fd))),
             Some(IoQueueType::UdpSocket) => {
-                let udp_op =
-                    UdpOperation::Pop(FutureResult::new(self.engine.ipv4.udp.pop(fd), None));
+                let udp_op = UdpOperation::Pop(FutureResult::new(self.ipv4.udp.pop(fd), None));
                 Ok(FutureOperation::Udp(udp_op))
             }
             _ => Err(Fail::BadFileDescriptor {}),
@@ -499,6 +501,25 @@ impl<RT: Runtime> LibOS<RT> {
         }
     }
 
+    /// New incoming data has arrived. Route it to the correct parse out the Ethernet header and
+    /// allow the correct protocol to handle it. The underlying protocol will futher parse the data
+    /// and inform the correct task that its data has arrived.
+    fn do_receive(&mut self, bytes: RT::Buf) -> Result<(), Fail> {
+        #[cfg(feature = "profiler")]
+        timer!("catnip::engine::receive");
+        let (header, payload) = Ethernet2Header::parse(bytes)?;
+        debug!("Engine received {:?}", header);
+        if self.rt.local_link_addr() != header.dst_addr && !header.dst_addr.is_broadcast() {
+            return Err(Fail::Ignored {
+                details: "Physical dst_addr mismatch",
+            });
+        }
+        match header.ether_type {
+            EtherType2::Arp => self.arp.receive(payload),
+            EtherType2::Ipv4 => self.ipv4.receive(payload),
+        }
+    }
+
     /// Scheduler will poll all futures that are ready to make progress.
     /// Then ask the runtime to receive new data which we will forward to the engine to parse and
     /// route to the correct protocol.
@@ -532,7 +553,7 @@ impl<RT: Runtime> LibOS<RT> {
                     }
 
                     for pkt in batch {
-                        if let Err(e) = self.engine.receive(pkt) {
+                        if let Err(e) = self.do_receive(pkt) {
                             warn!("Dropped packet: {:?}", e);
                         }
                     }
