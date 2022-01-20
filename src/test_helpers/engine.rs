@@ -5,25 +5,20 @@ use crate::{
     fail::Fail,
     protocols::{
         arp,
-        ethernet2::frame::{EtherType2, Ethernet2Header},
+        ethernet2::{
+            frame::{EtherType2, Ethernet2Header},
+            MacAddress,
+        },
         ipv4,
         tcp::operations::{AcceptFuture, ConnectFuture, PopFuture, PushFuture},
         udp::UdpPopFuture,
     },
-    queue::{IoQueueDescriptor, IoQueueTable, IoQueueType},
+    queue::IoQueueType,
+    queue::{IoQueueDescriptor, IoQueueTable},
     runtime::Runtime,
 };
-use std::{future::Future, net::Ipv4Addr, time::Duration};
 
-#[cfg(feature = "profiler")]
-use perftools::timer;
-
-#[cfg(test)]
-use crate::protocols::ethernet2::MacAddress;
-#[cfg(test)]
-use std::collections::HashMap;
-
-// TODO: Unclear why this itermediate `Engine` struct is needed.
+use std::{collections::HashMap, future::Future, net::Ipv4Addr, time::Duration};
 pub struct Engine<RT: Runtime> {
     rt: RT,
     pub arp: arp::Peer<RT>,
@@ -45,16 +40,11 @@ impl<RT: Runtime> Engine<RT> {
         })
     }
 
-    pub fn rt(&self) -> &RT {
-        &self.rt
+    pub fn rt(&mut self) -> &mut RT {
+        &mut self.rt
     }
 
-    /// New incoming data has arrived. Route it to the correct parse out the Ethernet header and
-    /// allow the correct protocol to handle it. The underlying protocol will futher parse the data
-    /// and inform the correct task that its data has arrived.
     pub fn receive(&mut self, bytes: RT::Buf) -> Result<(), Fail> {
-        #[cfg(feature = "profiler")]
-        timer!("catnip::engine::receive");
         let (header, payload) = Ethernet2Header::parse(bytes)?;
         debug!("Engine received {:?}", header);
         if self.rt.local_link_addr() != header.dst_addr && !header.dst_addr.is_broadcast() {
@@ -154,22 +144,18 @@ impl<RT: Runtime> Engine<RT> {
         self.ipv4.tcp.listen(socket_fd, backlog)
     }
 
-    #[cfg(test)]
     pub fn arp_query(&self, ipv4_addr: Ipv4Addr) -> impl Future<Output = Result<MacAddress, Fail>> {
         self.arp.query(ipv4_addr)
     }
 
-    #[cfg(test)]
     pub fn tcp_mss(&self, handle: IoQueueDescriptor) -> Result<usize, Fail> {
         self.ipv4.tcp_mss(handle)
     }
 
-    #[cfg(test)]
     pub fn tcp_rto(&self, handle: IoQueueDescriptor) -> Result<Duration, Fail> {
         self.ipv4.tcp_rto(handle)
     }
 
-    #[cfg(test)]
     pub fn export_arp_cache(&self) -> HashMap<Ipv4Addr, MacAddress> {
         self.arp.export_cache()
     }

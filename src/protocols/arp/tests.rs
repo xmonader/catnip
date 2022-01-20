@@ -4,7 +4,10 @@
 use super::pdu::{ArpOperation, ArpPdu};
 
 use crate::{
-    fail::Fail, protocols::ethernet2::frame::Ethernet2Header, runtime::Runtime, test_helpers,
+    fail::Fail,
+    protocols::ethernet2::frame::Ethernet2Header,
+    runtime::Runtime,
+    test_helpers::{self, TestRuntime},
 };
 
 use futures::{
@@ -38,7 +41,8 @@ fn immediate_reply() {
     assert!(Future::poll(fut.as_mut(), &mut ctx).is_pending());
 
     alice.rt().advance_clock(now);
-    let request = alice.rt().pop_frame();
+    let rt: &mut TestRuntime = alice.rt();
+    let request = rt.pop_frame();
 
     // bob hasn't heard of alice before, so he will ignore the request.
     info!("passing ARP request to bob (should be ignored)...");
@@ -117,7 +121,7 @@ fn slow_reply() {
 fn no_reply() {
     // tests to ensure that an are request results in a reply.
     let mut now = Instant::now();
-    let alice = test_helpers::new_alice(now);
+    let mut alice = test_helpers::new_alice(now);
     let options = alice.rt().arp_options();
 
     assert_eq!(options.retry_count, 2);

@@ -25,8 +25,10 @@ extern crate log;
 #[macro_use]
 extern crate derive_more;
 
+#[cfg(test)]
+pub mod test_helpers;
+
 pub mod collections;
-mod engine;
 pub mod fail;
 pub mod futures;
 pub mod interop;
@@ -38,5 +40,4 @@ pub mod protocols;
 pub mod queue;
 pub mod runtime;
 pub mod scheduler;
-pub mod test_helpers;
 pub mod timer;
