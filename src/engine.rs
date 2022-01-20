@@ -3,7 +3,8 @@
 
 use crate::{
     fail::Fail,
-    operations::ResultFuture,
+    futures::operation::FutureOperation,
+    futures::result::FutureResult,
     protocols::{
         arp,
         ethernet2::frame::{EtherType2, Ethernet2Header},
@@ -14,7 +15,6 @@ use crate::{
     },
     queue::{IoQueueDescriptor, IoQueueTable, IoQueueType},
     runtime::Runtime,
-    scheduler::Operation,
 };
 use std::{future::Future, net::Ipv4Addr, time::Duration};
 
@@ -99,15 +99,15 @@ impl<RT: Runtime> Engine<RT> {
         &mut self,
         fd: IoQueueDescriptor,
         remote_endpoint: ipv4::Endpoint,
-    ) -> Result<Operation<RT>, Fail> {
+    ) -> Result<FutureOperation<RT>, Fail> {
         match self.file_table.get(fd) {
-            Some(IoQueueType::TcpSocket) => {
-                Ok(Operation::from(self.ipv4.tcp.connect(fd, remote_endpoint)))
-            }
+            Some(IoQueueType::TcpSocket) => Ok(FutureOperation::from(
+                self.ipv4.tcp.connect(fd, remote_endpoint),
+            )),
             Some(IoQueueType::UdpSocket) => {
                 let udp_op =
                     UdpOperation::<RT>::Connect(fd, self.ipv4.udp.connect(fd, remote_endpoint));
-                Ok(Operation::Udp(udp_op))
+                Ok(FutureOperation::Udp(udp_op))
             }
             _ => Err(Fail::BadFileDescriptor {}),
         }
@@ -122,11 +122,11 @@ impl<RT: Runtime> Engine<RT> {
     }
 
     /// Accepts an incoming connection.
-    pub fn accept(&mut self, fd: IoQueueDescriptor) -> Result<Operation<RT>, Fail> {
+    pub fn accept(&mut self, fd: IoQueueDescriptor) -> Result<FutureOperation<RT>, Fail> {
         match self.file_table.get(fd) {
             Some(IoQueueType::TcpSocket) => {
                 let newfd = self.file_table.alloc(IoQueueType::TcpSocket);
-                Ok(Operation::from(self.ipv4.tcp.do_accept(fd, newfd)))
+                Ok(FutureOperation::from(self.ipv4.tcp.do_accept(fd, newfd)))
             }
             _ => Err(Fail::BadFileDescriptor {}),
         }
@@ -139,12 +139,16 @@ impl<RT: Runtime> Engine<RT> {
         }
     }
 
-    pub fn push(&mut self, fd: IoQueueDescriptor, buf: RT::Buf) -> Result<Operation<RT>, Fail> {
+    pub fn push(
+        &mut self,
+        fd: IoQueueDescriptor,
+        buf: RT::Buf,
+    ) -> Result<FutureOperation<RT>, Fail> {
         match self.file_table.get(fd) {
-            Some(IoQueueType::TcpSocket) => Ok(Operation::from(self.ipv4.tcp.push(fd, buf))),
+            Some(IoQueueType::TcpSocket) => Ok(FutureOperation::from(self.ipv4.tcp.push(fd, buf))),
             Some(IoQueueType::UdpSocket) => {
                 let udp_op = UdpOperation::Push(fd, self.ipv4.udp.push(fd, buf));
-                Ok(Operation::Udp(udp_op))
+                Ok(FutureOperation::Udp(udp_op))
             }
             _ => Err(Fail::BadFileDescriptor {}),
         }
@@ -155,11 +159,11 @@ impl<RT: Runtime> Engine<RT> {
         fd: IoQueueDescriptor,
         buf: RT::Buf,
         to: ipv4::Endpoint,
-    ) -> Result<Operation<RT>, Fail> {
+    ) -> Result<FutureOperation<RT>, Fail> {
         match self.file_table.get(fd) {
             Some(IoQueueType::UdpSocket) => {
                 let udp_op = UdpOperation::Push(fd, self.ipv4.udp.pushto(fd, buf, to));
-                Ok(Operation::Udp(udp_op))
+                Ok(FutureOperation::Udp(udp_op))
             }
             _ => Err(Fail::BadFileDescriptor {}),
         }
@@ -182,12 +186,12 @@ impl<RT: Runtime> Engine<RT> {
         self.ipv4.udp.pop(fd)
     }
 
-    pub fn pop(&mut self, fd: IoQueueDescriptor) -> Result<Operation<RT>, Fail> {
+    pub fn pop(&mut self, fd: IoQueueDescriptor) -> Result<FutureOperation<RT>, Fail> {
         match self.file_table.get(fd) {
-            Some(IoQueueType::TcpSocket) => Ok(Operation::from(self.ipv4.tcp.pop(fd))),
+            Some(IoQueueType::TcpSocket) => Ok(FutureOperation::from(self.ipv4.tcp.pop(fd))),
             Some(IoQueueType::UdpSocket) => {
-                let udp_op = UdpOperation::Pop(ResultFuture::new(self.ipv4.udp.pop(fd)));
-                Ok(Operation::Udp(udp_op))
+                let udp_op = UdpOperation::Pop(FutureResult::new(self.ipv4.udp.pop(fd), None));
+                Ok(FutureOperation::Udp(udp_op))
             }
             _ => Err(Fail::BadFileDescriptor {}),
         }

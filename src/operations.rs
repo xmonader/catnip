@@ -2,43 +2,11 @@
 // Licensed under the MIT license.
 
 use crate::{fail::Fail, protocols::ipv4, queue::IoQueueDescriptor, runtime::Runtime};
-use std::{
-    fmt,
-    future::Future,
-    pin::Pin,
-    task::{Context, Poll},
-};
+use std::fmt;
 
-pub struct ResultFuture<F: Future> {
-    pub future: F,
-    pub done: Option<F::Output>,
-}
-
-impl<F: Future> ResultFuture<F> {
-    pub fn new(future: F) -> Self {
-        Self { future, done: None }
-    }
-}
-
-impl<F: Future + Unpin> Future for ResultFuture<F>
-where
-    F::Output: Unpin,
-{
-    type Output = ();
-
-    fn poll(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<()> {
-        let self_ = self.get_mut();
-        if self_.done.is_some() {
-            panic!("Polled after completion")
-        }
-        let result = match Future::poll(Pin::new(&mut self_.future), ctx) {
-            Poll::Pending => return Poll::Pending,
-            Poll::Ready(r) => r,
-        };
-        self_.done = Some(result);
-        Poll::Ready(())
-    }
-}
+//==============================================================================
+// Structures
+//==============================================================================
 
 pub enum OperationResult<RT: Runtime> {
     Connect,
@@ -47,6 +15,10 @@ pub enum OperationResult<RT: Runtime> {
     Pop(Option<ipv4::Endpoint>, RT::Buf),
     Failed(Fail),
 }
+
+//==============================================================================
+// Trait Implementations
+//==============================================================================
 
 impl<RT: Runtime> fmt::Debug for OperationResult<RT> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

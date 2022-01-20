@@ -1,14 +1,15 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::interop::{dmtr_sgarray_t, dmtr_sgaseg_t};
 use crate::{
     collections::bytes::{Bytes, BytesMut},
     engine::Engine,
+    futures::operation::FutureOperation,
+    interop::{dmtr_sgarray_t, dmtr_sgaseg_t},
     logging,
     protocols::{arp, ethernet2::MacAddress, tcp, udp},
     runtime::{PacketBuf, Runtime, RECEIVE_BATCH_SIZE},
-    scheduler::{Operation, Scheduler, SchedulerHandle},
+    scheduler::{Scheduler, SchedulerHandle},
     timer::{Timer, TimerRc},
 };
 use arrayvec::ArrayVec;
@@ -45,7 +46,7 @@ pub type TestEngine = Engine<TestRuntime>;
 #[derive(Clone)]
 pub struct TestRuntime {
     inner: Rc<RefCell<Inner>>,
-    scheduler: Scheduler<Operation<TestRuntime>>,
+    scheduler: Scheduler<FutureOperation<TestRuntime>>,
 }
 
 impl TestRuntime {
@@ -199,7 +200,7 @@ impl Runtime for TestRuntime {
         out
     }
 
-    fn scheduler(&self) -> &Scheduler<Operation<Self>> {
+    fn scheduler(&self) -> &Scheduler<FutureOperation<Self>> {
         &self.scheduler
     }
 
@@ -260,7 +261,7 @@ impl Runtime for TestRuntime {
 
     fn spawn<F: Future<Output = ()> + 'static>(&self, future: F) -> SchedulerHandle {
         self.scheduler
-            .insert(Operation::Background(future.boxed_local()))
+            .insert(FutureOperation::Background(future.boxed_local()))
     }
 }
 

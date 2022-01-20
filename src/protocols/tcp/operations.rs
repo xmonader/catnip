@@ -3,10 +3,8 @@
 
 use super::peer::{Inner, Peer};
 use crate::{
-    fail::Fail,
-    operations::{OperationResult, ResultFuture},
-    queue::IoQueueDescriptor,
-    runtime::Runtime,
+    fail::Fail, futures::result::FutureResult, operations::OperationResult,
+    queue::IoQueueDescriptor, runtime::Runtime,
 };
 use std::{
     cell::RefCell,
@@ -18,33 +16,33 @@ use std::{
 };
 
 pub enum TcpOperation<RT: Runtime> {
-    Accept(ResultFuture<AcceptFuture<RT>>),
-    Connect(ResultFuture<ConnectFuture<RT>>),
-    Pop(ResultFuture<PopFuture<RT>>),
-    Push(ResultFuture<PushFuture<RT>>),
+    Accept(FutureResult<AcceptFuture<RT>>),
+    Connect(FutureResult<ConnectFuture<RT>>),
+    Pop(FutureResult<PopFuture<RT>>),
+    Push(FutureResult<PushFuture<RT>>),
 }
 
 impl<RT: Runtime> From<AcceptFuture<RT>> for TcpOperation<RT> {
     fn from(f: AcceptFuture<RT>) -> Self {
-        TcpOperation::Accept(ResultFuture::new(f))
+        TcpOperation::Accept(FutureResult::new(f, None))
     }
 }
 
 impl<RT: Runtime> From<ConnectFuture<RT>> for TcpOperation<RT> {
     fn from(f: ConnectFuture<RT>) -> Self {
-        TcpOperation::Connect(ResultFuture::new(f))
+        TcpOperation::Connect(FutureResult::new(f, None))
     }
 }
 
 impl<RT: Runtime> From<PushFuture<RT>> for TcpOperation<RT> {
     fn from(f: PushFuture<RT>) -> Self {
-        TcpOperation::Push(ResultFuture::new(f))
+        TcpOperation::Push(FutureResult::new(f, None))
     }
 }
 
 impl<RT: Runtime> From<PopFuture<RT>> for TcpOperation<RT> {
     fn from(f: PopFuture<RT>) -> Self {
-        TcpOperation::Pop(ResultFuture::new(f))
+        TcpOperation::Pop(FutureResult::new(f, None))
     }
 }
 
@@ -66,38 +64,38 @@ impl<RT: Runtime> TcpOperation<RT> {
         use TcpOperation::*;
 
         match self {
-            Connect(ResultFuture {
+            Connect(FutureResult {
                 future,
                 done: Some(Ok(())),
             }) => (future.fd, OperationResult::Connect),
-            Connect(ResultFuture {
+            Connect(FutureResult {
                 future,
                 done: Some(Err(e)),
             }) => (future.fd, OperationResult::Failed(e)),
 
-            Accept(ResultFuture {
+            Accept(FutureResult {
                 future,
                 done: Some(Ok(fd)),
             }) => (future.fd, OperationResult::Accept(fd)),
-            Accept(ResultFuture {
+            Accept(FutureResult {
                 future,
                 done: Some(Err(e)),
             }) => (future.fd, OperationResult::Failed(e)),
 
-            Push(ResultFuture {
+            Push(FutureResult {
                 future,
                 done: Some(Ok(())),
             }) => (future.fd, OperationResult::Push),
-            Push(ResultFuture {
+            Push(FutureResult {
                 future,
                 done: Some(Err(e)),
             }) => (future.fd, OperationResult::Failed(e)),
 
-            Pop(ResultFuture {
+            Pop(FutureResult {
                 future,
                 done: Some(Ok(bytes)),
             }) => (future.fd, OperationResult::Pop(None, bytes)),
-            Pop(ResultFuture {
+            Pop(FutureResult {
                 future,
                 done: Some(Err(e)),
             }) => (future.fd, OperationResult::Failed(e)),
