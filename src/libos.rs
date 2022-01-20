@@ -10,7 +10,10 @@ use crate::{
     futures::operation::FutureOperation,
     interop::{dmtr_qresult_t, dmtr_sgarray_t},
     operations::OperationResult,
-    protocols::{ipv4::Endpoint, udp::UdpOperation},
+    protocols::{
+        ipv4::{self, Endpoint},
+        udp::UdpOperation,
+    },
     queue::{IoQueueDescriptor, IoQueueType},
     runtime::Runtime,
     scheduler::SchedulerHandle,
@@ -295,6 +298,21 @@ impl<RT: Runtime> LibOS<RT> {
         Ok(self.rt.scheduler().insert(future).into_raw())
     }
 
+    fn do_pushto(
+        &mut self,
+        fd: IoQueueDescriptor,
+        buf: RT::Buf,
+        to: ipv4::Endpoint,
+    ) -> Result<FutureOperation<RT>, Fail> {
+        match self.engine.file_table.get(fd) {
+            Some(IoQueueType::UdpSocket) => {
+                let udp_op = UdpOperation::Push(fd, self.engine.ipv4.udp.pushto(fd, buf, to));
+                Ok(FutureOperation::Udp(udp_op))
+            }
+            _ => Err(Fail::BadFileDescriptor {}),
+        }
+    }
+
     pub fn pushto(
         &mut self,
         fd: IoQueueDescriptor,
@@ -309,7 +327,7 @@ impl<RT: Runtime> LibOS<RT> {
                 details: "zero-length buffer",
             });
         }
-        let future = self.engine.pushto(fd, buf, to)?;
+        let future = self.do_pushto(fd, buf, to)?;
         Ok(self.rt.scheduler().insert(future).into_raw())
     }
 
@@ -326,7 +344,7 @@ impl<RT: Runtime> LibOS<RT> {
                 details: "zero-length buffer",
             });
         }
-        let future = self.engine.pushto(fd, buf, to)?;
+        let future = self.do_pushto(fd, buf, to)?;
         Ok(self.rt.scheduler().insert(future).into_raw())
     }
 
