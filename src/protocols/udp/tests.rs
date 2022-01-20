@@ -23,7 +23,7 @@ use std::{
 //==============================================================================
 
 #[test]
-fn udp_bind_close() {
+fn udp_bind_udp_close() {
     let mut now = Instant::now();
 
     // Setup Alice.
@@ -43,8 +43,8 @@ fn udp_bind_close() {
     now += Duration::from_micros(1);
 
     // Close peers.
-    alice.close(alice_fd).unwrap();
-    bob.close(bob_fd).unwrap();
+    alice.udp_close(alice_fd).unwrap();
+    bob.udp_close(bob_fd).unwrap();
 }
 
 //==============================================================================
@@ -85,8 +85,8 @@ fn udp_push_pop() {
     assert_eq!(received_buf, buf);
 
     // Close peers.
-    alice.close(alice_fd).unwrap();
-    bob.close(bob_fd).unwrap();
+    alice.udp_close(alice_fd).unwrap();
+    bob.udp_close(bob_fd).unwrap();
 }
 
 //==============================================================================
@@ -143,8 +143,8 @@ fn udp_ping_pong() {
     assert_eq!(received_buf_b, buf_b);
 
     // Close peers.
-    alice.close(alice_fd).unwrap();
-    bob.close(bob_fd).unwrap();
+    alice.udp_close(alice_fd).unwrap();
+    bob.udp_close(bob_fd).unwrap();
 }
 
 //==============================================================================
@@ -152,15 +152,15 @@ fn udp_ping_pong() {
 //==============================================================================
 
 #[test]
-fn udp_loop1_bind_close() {
+fn udp_loop1_bind_udp_close() {
     // Loop.
     for _ in 0..1000 {
-        udp_bind_close();
+        udp_bind_udp_close();
     }
 }
 
 #[test]
-fn udp_loop2_bind_close() {
+fn udp_loop2_bind_udp_close() {
     let mut now = Instant::now();
 
     // Alice.
@@ -186,8 +186,8 @@ fn udp_loop2_bind_close() {
         now += Duration::from_micros(1);
 
         // Close peers.
-        alice.close(alice_fd).unwrap();
-        bob.close(bob_fd).unwrap();
+        alice.udp_close(alice_fd).unwrap();
+        bob.udp_close(bob_fd).unwrap();
     }
 }
 
@@ -239,8 +239,8 @@ fn udp_loop2_push_pop() {
     }
 
     // Close peers.
-    alice.close(alice_fd).unwrap();
-    bob.close(bob_fd).unwrap();
+    alice.udp_close(alice_fd).unwrap();
+    bob.udp_close(bob_fd).unwrap();
 }
 
 //==============================================================================
@@ -308,8 +308,8 @@ fn udp_loop2_ping_pong() {
     }
 
     // Close peers.
-    alice.close(alice_fd).unwrap();
-    bob.close(bob_fd).unwrap();
+    alice.udp_close(alice_fd).unwrap();
+    bob.udp_close(bob_fd).unwrap();
 }
 
 //==============================================================================
@@ -337,7 +337,7 @@ fn udp_bind_address_in_use() {
     );
 
     // Close peers.
-    alice.close(alice_fd).unwrap();
+    alice.udp_close(alice_fd).unwrap();
 }
 
 #[test]
@@ -360,20 +360,20 @@ fn udp_bind_bad_file_descriptor() {
 //==============================================================================
 
 #[test]
-fn udp_close_bad_file_descriptor() {
+fn udp_udp_close_bad_file_descriptor() {
     let now = Instant::now();
 
     // Setup Alice.
     let mut alice = test_helpers::new_alice2(now);
     let alice_fd: IoQueueDescriptor = alice.udp_socket().unwrap();
 
-    // Try to close bad file descriptor.
-    must_let!(let Err(err) = alice.close(IoQueueDescriptor::try_from(usize::MAX).unwrap()));
+    // Try to udp_close bad file descriptor.
+    must_let!(let Err(err) = alice.udp_close(IoQueueDescriptor::try_from(usize::MAX).unwrap()));
     assert_eq!(err, Fail::BadFileDescriptor {});
 
-    // Try to close Alice two times.
-    alice.close(alice_fd).unwrap();
-    must_let!(let Err(err) = alice.close(alice_fd));
+    // Try to udp_close Alice two times.
+    alice.udp_close(alice_fd).unwrap();
+    must_let!(let Err(err) = alice.udp_close(alice_fd));
     assert_eq!(err, Fail::BadFileDescriptor {});
 }
 
@@ -415,8 +415,8 @@ fn udp_pop_not_bound() {
     );
 
     // Close peers.
-    alice.close(alice_fd).unwrap();
-    bob.close(bob_fd).unwrap();
+    alice.udp_close(alice_fd).unwrap();
+    bob.udp_close(bob_fd).unwrap();
 }
 
 //==============================================================================
@@ -450,6 +450,6 @@ fn udp_push_bad_file_descriptor() {
     now += Duration::from_micros(1);
 
     // Close peers.
-    alice.close(alice_fd).unwrap();
-    bob.close(bob_fd).unwrap();
+    alice.udp_close(alice_fd).unwrap();
+    bob.udp_close(bob_fd).unwrap();
 }

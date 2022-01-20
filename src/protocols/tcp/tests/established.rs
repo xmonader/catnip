@@ -245,7 +245,7 @@ fn connection_hangup(
     client_fd: IoQueueDescriptor,
 ) {
     // Send FIN: Client -> Server
-    client.close(client_fd).unwrap();
+    client.tcp_close(client_fd).unwrap();
     client.rt().poll_scheduler();
     let bytes: Bytes = client.rt().pop_frame();
     advance_clock(Some(server), Some(client), now);
@@ -261,7 +261,7 @@ fn connection_hangup(
     advance_clock(Some(server), Some(client), now);
 
     // Send FIN: Server -> Client
-    server.close(server_fd).unwrap();
+    server.tcp_close(server_fd).unwrap();
     server.rt().poll_scheduler();
     let bytes: Bytes = server.rt().pop_frame();
     advance_clock(Some(server), Some(client), now);
