@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-mod threadunsafe;
+pub mod shared_waker;
+pub mod waker64;
 
-pub use self::threadunsafe::{SharedWaker, WakerU64};
+pub use shared_waker::SharedWaker;
+pub use waker64::WakerU64;
