@@ -78,17 +78,6 @@ impl<RT: Runtime> Engine<RT> {
         self.ipv4.ping(dest_ipv4_addr, timeout)
     }
 
-    /// Accepts an incoming connection.
-    pub fn accept(&mut self, fd: IoQueueDescriptor) -> Result<FutureOperation<RT>, Fail> {
-        match self.file_table.get(fd) {
-            Some(IoQueueType::TcpSocket) => {
-                let newfd = self.file_table.alloc(IoQueueType::TcpSocket);
-                Ok(FutureOperation::from(self.ipv4.tcp.do_accept(fd, newfd)))
-            }
-            _ => Err(Fail::BadFileDescriptor {}),
-        }
-    }
-
     pub fn push(
         &mut self,
         fd: IoQueueDescriptor,

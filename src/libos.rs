@@ -168,7 +168,16 @@ impl<RT: Runtime> LibOS<RT> {
         #[cfg(feature = "profiler")]
         timer!("catnip::accept");
         trace!("accept(): {:?}", fd);
-        match self.engine.accept(fd) {
+        let r = match self.engine.file_table.get(fd) {
+            Some(IoQueueType::TcpSocket) => {
+                let newfd = self.engine.file_table.alloc(IoQueueType::TcpSocket);
+                Ok(FutureOperation::from(
+                    self.engine.ipv4.tcp.do_accept(fd, newfd),
+                ))
+            }
+            _ => Err(Fail::BadFileDescriptor {}),
+        };
+        match r {
             Ok(future) => Ok(self.rt.scheduler().insert(future).into_raw()),
             Err(fail) => Err(fail),
         }
