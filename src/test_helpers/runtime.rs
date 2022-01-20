@@ -20,67 +20,80 @@ use rand::{
     seq::SliceRandom,
     Rng, SeedableRng,
 };
-use std::collections::HashMap;
-use std::mem;
-use std::ptr;
-use std::slice;
 use std::{
     cell::RefCell,
     collections::VecDeque,
     future::Future,
+    mem,
     net::Ipv4Addr,
+    ptr,
     rc::Rc,
+    slice,
     time::{Duration, Instant},
 };
 
-pub const RECEIVE_WINDOW_SIZE: usize = 1024;
-pub const ALICE_MAC: MacAddress = MacAddress::new([0x12, 0x23, 0x45, 0x67, 0x89, 0xab]);
-pub const ALICE_IPV4: Ipv4Addr = Ipv4Addr::new(192, 168, 1, 1);
-pub const BOB_MAC: MacAddress = MacAddress::new([0xab, 0x89, 0x67, 0x45, 0x23, 0x12]);
-pub const BOB_IPV4: Ipv4Addr = Ipv4Addr::new(192, 168, 1, 2);
-pub const CARRIE_MAC: MacAddress = MacAddress::new([0xef, 0xcd, 0xab, 0x89, 0x67, 0x45]);
-pub const CARRIE_IPV4: Ipv4Addr = Ipv4Addr::new(192, 168, 1, 3);
+//==============================================================================
+// Types
+//==============================================================================
 
 pub type TestEngine = Engine<TestRuntime>;
 
+//==============================================================================
+// Structures
+//==============================================================================
+
+// TODO: Drop inner mutability pattern.
+pub struct Inner {
+    #[allow(unused)]
+    timer: TimerRc,
+    rng: SmallRng,
+    incoming: VecDeque<Bytes>,
+    outgoing: VecDeque<Bytes>,
+}
+
 #[derive(Clone)]
 pub struct TestRuntime {
+    name: &'static str,
+    link_addr: MacAddress,
+    ipv4_addr: Ipv4Addr,
+    arp_options: arp::Options,
+    udp_options: udp::Options,
+    tcp_options: tcp::Options<TestRuntime>,
     inner: Rc<RefCell<Inner>>,
     scheduler: Scheduler<FutureOperation<TestRuntime>>,
 }
+
+//==============================================================================
+// Associate Functions
+//==============================================================================
 
 impl TestRuntime {
     pub fn new(
         name: &'static str,
         now: Instant,
+        arp_options: arp::Options,
+        udp_options: udp::Options,
+        tcp_options: tcp::Options<TestRuntime>,
         link_addr: MacAddress,
         ipv4_addr: Ipv4Addr,
     ) -> Self {
         logging::initialize();
-        let arp_options = arp::Options::new(
-            Duration::from_secs(600),
-            Duration::from_secs(1),
-            2,
-            HashMap::new(),
-            false,
-        );
-
-        let tcp_options = tcp::Options::<Self>::default();
 
         let inner = Inner {
-            name,
             timer: TimerRc(Rc::new(Timer::new(now))),
             rng: SmallRng::from_seed([0; 32]),
             incoming: VecDeque::new(),
             outgoing: VecDeque::new(),
-            link_addr,
-            ipv4_addr,
-            tcp_options,
-            arp_options,
         };
         Self {
+            name,
+            link_addr,
+            ipv4_addr,
             inner: Rc::new(RefCell::new(inner)),
             scheduler: Scheduler::new(),
+            arp_options,
+            udp_options,
+            tcp_options,
         }
     }
 
@@ -102,19 +115,9 @@ impl TestRuntime {
     }
 }
 
-struct Inner {
-    #[allow(unused)]
-    name: &'static str,
-    timer: TimerRc,
-    rng: SmallRng,
-    incoming: VecDeque<Bytes>,
-    outgoing: VecDeque<Bytes>,
-
-    link_addr: MacAddress,
-    ipv4_addr: Ipv4Addr,
-    tcp_options: tcp::Options<TestRuntime>,
-    arp_options: arp::Options,
-}
+//==============================================================================
+// Trait Implementations
+//==============================================================================
 
 impl Runtime for TestRuntime {
     type Buf = Bytes;
@@ -205,23 +208,23 @@ impl Runtime for TestRuntime {
     }
 
     fn local_link_addr(&self) -> MacAddress {
-        self.inner.borrow().link_addr
+        self.link_addr
     }
 
     fn local_ipv4_addr(&self) -> Ipv4Addr {
-        self.inner.borrow().ipv4_addr
+        self.ipv4_addr
     }
 
     fn tcp_options(&self) -> tcp::Options<TestRuntime> {
-        self.inner.borrow().tcp_options.clone()
+        self.tcp_options.clone()
     }
 
     fn udp_options(&self) -> udp::Options {
-        udp::Options::default()
+        self.udp_options.clone()
     }
 
     fn arp_options(&self) -> arp::Options {
-        self.inner.borrow().arp_options.clone()
+        self.arp_options.clone()
     }
 
     fn advance_clock(&self, now: Instant) {
@@ -263,39 +266,4 @@ impl Runtime for TestRuntime {
         self.scheduler
             .insert(FutureOperation::Background(future.boxed_local()))
     }
-}
-
-pub fn new_alice(now: Instant) -> Engine<TestRuntime> {
-    let rt = TestRuntime::new("alice", now, ALICE_MAC, ALICE_IPV4);
-    Engine::new(rt).unwrap()
-}
-
-pub fn new_bob(now: Instant) -> Engine<TestRuntime> {
-    let rt = TestRuntime::new("bob", now, BOB_MAC, BOB_IPV4);
-    Engine::new(rt).unwrap()
-}
-
-pub fn new_alice2(now: Instant) -> Engine<TestRuntime> {
-    let rt = TestRuntime::new("alice", now, ALICE_MAC, ALICE_IPV4);
-    {
-        let arp_options: &mut _ = &mut rt.inner.borrow_mut().arp_options;
-        arp_options.initial_values.insert(ALICE_IPV4, ALICE_MAC);
-        arp_options.initial_values.insert(BOB_IPV4, BOB_MAC);
-    }
-    Engine::new(rt).unwrap()
-}
-
-pub fn new_bob2(now: Instant) -> Engine<TestRuntime> {
-    let rt = TestRuntime::new("bob", now, BOB_MAC, BOB_IPV4);
-    {
-        let arp_options: &mut _ = &mut rt.inner.borrow_mut().arp_options;
-        arp_options.initial_values.insert(BOB_IPV4, BOB_MAC);
-        arp_options.initial_values.insert(ALICE_IPV4, ALICE_MAC);
-    }
-    Engine::new(rt).unwrap()
-}
-
-pub fn new_carrie(now: Instant) -> Engine<TestRuntime> {
-    let rt = TestRuntime::new("carrie", now, CARRIE_MAC, CARRIE_IPV4);
-    Engine::new(rt).unwrap()
 }

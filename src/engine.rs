@@ -45,8 +45,8 @@ impl<RT: Runtime> Engine<RT> {
         })
     }
 
-    pub fn rt(&self) -> &RT {
-        &self.rt
+    pub fn rt(&mut self) -> &mut RT {
+        &mut self.rt
     }
 
     /// New incoming data has arrived. Route it to the correct parse out the Ethernet header and
