@@ -7,9 +7,9 @@ use super::{
     options::ArpOptions,
     pdu::{ArpOperation, ArpPdu},
 };
-use crate::futures_utility::UtilityMethods;
 use crate::{
     fail::Fail,
+    futures::UtilityMethods,
     protocols::ethernet2::{
         frame::{EtherType2, Ethernet2Header},
         MacAddress,

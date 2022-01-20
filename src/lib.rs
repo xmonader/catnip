@@ -29,7 +29,6 @@ pub mod collections;
 pub mod engine;
 pub mod fail;
 pub mod futures;
-mod futures_utility;
 pub mod interop;
 pub mod libos;
 pub mod logging;

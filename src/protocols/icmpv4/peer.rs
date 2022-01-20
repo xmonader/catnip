@@ -4,6 +4,7 @@
 use super::datagram::{Icmpv4Header, Icmpv4Type2};
 use crate::{
     fail::Fail,
+    futures::UtilityMethods,
     protocols::{
         arp,
         ethernet2::frame::{EtherType2, Ethernet2Header},
@@ -23,8 +24,6 @@ use futures::{
     },
     FutureExt, StreamExt,
 };
-
-use crate::futures_utility::UtilityMethods;
 
 use std::{
     cell::RefCell, collections::HashMap, future::Future, net::Ipv4Addr, num::Wrapping, process,
@@ -122,15 +121,12 @@ impl<RT: Runtime> Icmpv4Peer<RT> {
                     "ARP query complete ({} -> {})",
                     dst_ipv4_addr, dst_link_addr
                 );
-                debug!(
-                    "reply ping ({}, {}, {})",
-                    dst_ipv4_addr, id, seq_num
-                );
+                debug!("reply ping ({}, {}, {})", dst_ipv4_addr, id, seq_num);
                 // Send reply message.
                 rt.transmit(Icmpv4Message::new(
-                        Ethernet2Header::new(dst_link_addr, rt.local_link_addr(), EtherType2::Ipv4),
-                        Ipv4Header::new(rt.local_ipv4_addr(), dst_ipv4_addr, Ipv4Protocol2::Icmpv4),
-                        Icmpv4Header::new(Icmpv4Type2::EchoReply { id, seq_num }, 0),
+                    Ethernet2Header::new(dst_link_addr, rt.local_link_addr(), EtherType2::Ipv4),
+                    Ipv4Header::new(rt.local_ipv4_addr(), dst_ipv4_addr, Ipv4Protocol2::Icmpv4),
+                    Icmpv4Header::new(Icmpv4Type2::EchoReply { id, seq_num }, 0),
                 ));
             };
             if let Err(e) = r {
@@ -151,7 +147,7 @@ impl<RT: Runtime> Icmpv4Peer<RT> {
                 self.tx
                     .unbounded_send((ipv4_header.src_addr, id, seq_num))
                     .unwrap();
-                }
+            }
             Icmpv4Type2::EchoReply { id, seq_num } => {
                 if let Some(tx) = self.requests.borrow_mut().remove(&(id, seq_num)) {
                     let _ = tx.send(());
