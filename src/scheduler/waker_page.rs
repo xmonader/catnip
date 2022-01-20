@@ -5,7 +5,7 @@
 //! in our scheduler. This page is represented by a 64-bit integer where the ith bit corresponds to
 //! the ith task in that page. This way fast bit arithmetic can be used to index into a task's
 //! state and uniquely identify a task among multiple pages.
-use crate::sync::{SharedWaker, WakerU64};
+use super::sync::{SharedWaker, WakerU64};
 use std::{
     alloc::{Allocator, Global, Layout},
     mem,

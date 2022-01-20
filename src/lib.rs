@@ -39,6 +39,5 @@ pub mod protocols;
 pub mod queue;
 pub mod runtime;
 pub mod scheduler;
-pub mod sync;
 pub mod test_helpers;
 pub mod timer;

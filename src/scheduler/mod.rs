@@ -17,10 +17,13 @@
 // 1) A single Scheduler owned by the top level loop. This can take out finished values and poll.
 // 2) A cloneable half that's given to the runtime. This can insert new values and drop handles.
 //
-use crate::{
-    collections::waker_page::{WakerPage, WakerPageRef, WAKER_PAGE_SIZE},
-    sync::SharedWaker,
-};
+
+mod sync;
+mod waker_page;
+
+use sync::SharedWaker;
+use waker_page::{WakerPage, WakerPageRef, WAKER_PAGE_SIZE};
+
 use std::{
     cell::RefCell,
     future::Future,
