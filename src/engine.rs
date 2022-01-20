@@ -196,6 +196,10 @@ impl<RT: Runtime> Engine<RT> {
         self.ipv4.udp.bind(socket_fd, endpoint)
     }
 
+    pub fn udp_close(&mut self, socket_fd: IoQueueDescriptor) -> Result<(), Fail> {
+        self.ipv4.udp.do_close(socket_fd)
+    }
+
     pub fn tcp_socket(&mut self) -> Result<IoQueueDescriptor, Fail> {
         let fd = self.file_table.alloc(IoQueueType::TcpSocket);
         self.ipv4.tcp.do_socket(fd);
