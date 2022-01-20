@@ -7,13 +7,14 @@
 use crate::{
     engine::Engine,
     fail::Fail,
+    futures::operation::FutureOperation,
     interop::{dmtr_qresult_t, dmtr_sgarray_t},
     operations::OperationResult,
     protocols::ipv4::Endpoint,
     protocols::Protocol,
     queue::IoQueueDescriptor,
     runtime::Runtime,
-    scheduler::{Operation, SchedulerHandle},
+    scheduler::SchedulerHandle,
 };
 use libc::c_int;
 use must_let::must_let;
@@ -399,9 +400,11 @@ impl<RT: Runtime> LibOS<RT> {
         handle: SchedulerHandle,
     ) -> (IoQueueDescriptor, OperationResult<RT>) {
         match self.rt.scheduler().take(handle) {
-            Operation::Tcp(f) => f.expect_result(),
-            Operation::Udp(f) => f.expect_result(),
-            Operation::Background(..) => panic!("`take_operation` attempted on background task!"),
+            FutureOperation::Tcp(f) => f.expect_result(),
+            FutureOperation::Udp(f) => f.expect_result(),
+            FutureOperation::Background(..) => {
+                panic!("`take_operation` attempted on background task!")
+            }
         }
     }
 

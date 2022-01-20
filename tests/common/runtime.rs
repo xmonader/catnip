@@ -5,13 +5,14 @@ use arrayvec::ArrayVec;
 
 use catnip::{
     collections::bytes::{Bytes, BytesMut},
+    futures::operation::FutureOperation,
     interop::dmtr_sgarray_t,
     interop::dmtr_sgaseg_t,
     protocols::ethernet2::MacAddress,
     protocols::{arp, tcp, udp},
     runtime::Runtime,
     runtime::{PacketBuf, RECEIVE_BATCH_SIZE},
-    scheduler::{Operation, Scheduler, SchedulerHandle},
+    scheduler::{Scheduler, SchedulerHandle},
     timer::{Timer, TimerRc},
 };
 
@@ -45,7 +46,7 @@ use std::{
 #[derive(Clone)]
 pub struct DummyRuntime {
     inner: Rc<RefCell<Inner>>,
-    scheduler: Scheduler<Operation<DummyRuntime>>,
+    scheduler: Scheduler<FutureOperation<DummyRuntime>>,
 }
 
 struct Inner {
@@ -190,7 +191,7 @@ impl Runtime for DummyRuntime {
         out
     }
 
-    fn scheduler(&self) -> &Scheduler<Operation<Self>> {
+    fn scheduler(&self) -> &Scheduler<FutureOperation<Self>> {
         &self.scheduler
     }
 
@@ -251,6 +252,6 @@ impl Runtime for DummyRuntime {
 
     fn spawn<F: Future<Output = ()> + 'static>(&self, future: F) -> SchedulerHandle {
         self.scheduler
-            .insert(Operation::Background(future.boxed_local()))
+            .insert(FutureOperation::Background(future.boxed_local()))
     }
 }

@@ -3,9 +3,10 @@
 
 use super::listener::Listener;
 
-use crate::{fail::Fail, operations::ResultFuture, queue::IoQueueDescriptor, runtime::Runtime};
-
-use crate::{operations::OperationResult, protocols::ipv4};
+use crate::{
+    fail::Fail, futures::result::FutureResult, operations::OperationResult, protocols::ipv4,
+    queue::IoQueueDescriptor, runtime::Runtime,
+};
 
 use std::{
     cell::RefCell,
@@ -31,7 +32,7 @@ pub struct PopFuture<RT: Runtime> {
 pub enum UdpOperation<RT: Runtime> {
     Connect(IoQueueDescriptor, Result<(), Fail>),
     Push(IoQueueDescriptor, Result<(), Fail>),
-    Pop(ResultFuture<PopFuture<RT>>),
+    Pop(FutureResult<PopFuture<RT>>),
 }
 
 //==============================================================================
@@ -47,11 +48,11 @@ impl<RT: Runtime> UdpOperation<RT> {
             UdpOperation::Connect(fd, Ok(())) => (fd, OperationResult::Connect),
             UdpOperation::Push(fd, Ok(())) => (fd, OperationResult::Push),
 
-            UdpOperation::Pop(ResultFuture {
+            UdpOperation::Pop(FutureResult {
                 future,
                 done: Some(Ok((addr, bytes))),
             }) => (future.fd, OperationResult::Pop(addr, bytes)),
-            UdpOperation::Pop(ResultFuture {
+            UdpOperation::Pop(FutureResult {
                 future,
                 done: Some(Err(e)),
             }) => (future.fd, OperationResult::Failed(e)),

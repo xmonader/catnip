@@ -1,9 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 use crate::{
+    futures::operation::FutureOperation,
     interop::dmtr_sgarray_t,
     protocols::{arp, ethernet2::MacAddress, tcp, udp},
-    scheduler::{Operation, Scheduler, SchedulerHandle},
+    scheduler::{Scheduler, SchedulerHandle},
 };
 use arrayvec::ArrayVec;
 use rand::distributions::{Distribution, Standard};
@@ -66,5 +67,5 @@ pub trait Runtime: Clone + Unpin + 'static {
     fn rng_shuffle<T>(&self, slice: &mut [T]);
 
     fn spawn<F: Future<Output = ()> + 'static>(&self, future: F) -> SchedulerHandle;
-    fn scheduler(&self) -> &Scheduler<Operation<Self>>;
+    fn scheduler(&self) -> &Scheduler<FutureOperation<Self>>;
 }
