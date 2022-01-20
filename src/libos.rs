@@ -246,6 +246,23 @@ impl<RT: Runtime> LibOS<RT> {
         Ok(())
     }
 
+    fn do_push(
+        &mut self,
+        fd: IoQueueDescriptor,
+        buf: RT::Buf,
+    ) -> Result<FutureOperation<RT>, Fail> {
+        match self.engine.file_table.get(fd) {
+            Some(IoQueueType::TcpSocket) => {
+                Ok(FutureOperation::from(self.engine.ipv4.tcp.push(fd, buf)))
+            }
+            Some(IoQueueType::UdpSocket) => {
+                let udp_op = UdpOperation::Push(fd, self.engine.ipv4.udp.push(fd, buf));
+                Ok(FutureOperation::Udp(udp_op))
+            }
+            _ => Err(Fail::BadFileDescriptor {}),
+        }
+    }
+
     /// Create a push request for Demikernel to asynchronously write data from `sga` to the
     /// IO connection represented by `fd`. This operation returns immediately with a `QToken`.
     /// The data has been written when [`wait`ing](Self::wait) on the QToken returns.
@@ -259,7 +276,7 @@ impl<RT: Runtime> LibOS<RT> {
                 details: "zero-length buffer",
             });
         }
-        let future = self.engine.push(fd, buf)?;
+        let future = self.do_push(fd, buf)?;
         Ok(self.rt.scheduler().insert(future).into_raw())
     }
 
@@ -274,7 +291,7 @@ impl<RT: Runtime> LibOS<RT> {
                 details: "zero-length buffer",
             });
         }
-        let future = self.engine.push(fd, buf)?;
+        let future = self.do_push(fd, buf)?;
         Ok(self.rt.scheduler().insert(future).into_raw())
     }
 

@@ -78,21 +78,6 @@ impl<RT: Runtime> Engine<RT> {
         self.ipv4.ping(dest_ipv4_addr, timeout)
     }
 
-    pub fn push(
-        &mut self,
-        fd: IoQueueDescriptor,
-        buf: RT::Buf,
-    ) -> Result<FutureOperation<RT>, Fail> {
-        match self.file_table.get(fd) {
-            Some(IoQueueType::TcpSocket) => Ok(FutureOperation::from(self.ipv4.tcp.push(fd, buf))),
-            Some(IoQueueType::UdpSocket) => {
-                let udp_op = UdpOperation::Push(fd, self.ipv4.udp.push(fd, buf));
-                Ok(FutureOperation::Udp(udp_op))
-            }
-            _ => Err(Fail::BadFileDescriptor {}),
-        }
-    }
-
     pub fn pushto(
         &mut self,
         fd: IoQueueDescriptor,
