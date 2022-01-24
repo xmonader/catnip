@@ -3,11 +3,10 @@
 
 use super::{
     datagram::{UdpDatagram, UdpHeader},
-    listener::Listener,
+    listener::SharedListener,
     operations::PopFuture,
     socket::Socket,
 };
-
 use crate::{
     fail::Fail,
     protocols::{
@@ -21,7 +20,7 @@ use crate::{
     scheduler::SchedulerHandle,
 };
 use futures::{channel::mpsc, stream::StreamExt};
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 #[cfg(feature = "profiler")]
 use perftools::timer;
@@ -46,7 +45,7 @@ pub struct UdpPeer<RT: Runtime> {
     arp: arp::Peer<RT>,
 
     sockets: HashMap<IoQueueDescriptor, Socket>,
-    bound: HashMap<ipv4::Endpoint, Rc<RefCell<Listener<RT::Buf>>>>,
+    bound: HashMap<ipv4::Endpoint, SharedListener<RT::Buf>>,
     outgoing: OutgoingSender<RT::Buf>,
 
     #[allow(unused)]
@@ -135,12 +134,8 @@ impl<RT: Runtime> UdpPeer<RT> {
         }
 
         // Register listener.
-        let listener = Listener::default();
-        if self
-            .bound
-            .insert(addr, Rc::new(RefCell::new(listener)))
-            .is_some()
-        {
+        let listener = SharedListener::default();
+        if self.bound.insert(addr, listener).is_some() {
             return Err(Fail::AddressInUse {});
         }
 
@@ -196,9 +191,8 @@ impl<RT: Runtime> UdpPeer<RT> {
         })?;
 
         // Consume data and wakeup receiver.
-        let mut l = listener.borrow_mut();
-        l.push_data(remote, data);
-        if let Some(w) = l.take_waker() {
+        listener.push_data(remote, data);
+        if let Some(w) = listener.take_waker() {
             w.wake()
         }
 
