@@ -44,7 +44,7 @@ pub fn new_alice(now: Instant) -> Engine<TestRuntime> {
         HashMap::new(),
         false,
     );
-    let udp_options = udp::Options::default();
+    let udp_options = udp::UdpConfig::default();
     let tcp_options = tcp::Options::<TestRuntime>::default();
     let rt = TestRuntime::new(
         "alice",
@@ -66,7 +66,7 @@ pub fn new_bob(now: Instant) -> Engine<TestRuntime> {
         HashMap::new(),
         false,
     );
-    let udp_options = udp::Options::default();
+    let udp_options = udp::UdpConfig::default();
     let tcp_options = tcp::Options::<TestRuntime>::default();
     let rt = TestRuntime::new(
         "bob",
@@ -88,7 +88,7 @@ pub fn new_alice2(now: Instant) -> Engine<TestRuntime> {
         HashMap::new(),
         false,
     );
-    let udp_options = udp::Options::default();
+    let udp_options = udp::UdpConfig::default();
     let tcp_options = tcp::Options::<TestRuntime>::default();
     arp_options.initial_values.insert(ALICE_IPV4, ALICE_MAC);
     arp_options.initial_values.insert(BOB_IPV4, BOB_MAC);
@@ -112,7 +112,7 @@ pub fn new_bob2(now: Instant) -> Engine<TestRuntime> {
         HashMap::new(),
         false,
     );
-    let udp_options = udp::Options::default();
+    let udp_options = udp::UdpConfig::default();
     let tcp_options = tcp::Options::<TestRuntime>::default();
     arp_options.initial_values.insert(BOB_IPV4, BOB_MAC);
     arp_options.initial_values.insert(ALICE_IPV4, ALICE_MAC);
@@ -136,7 +136,7 @@ pub fn new_carrie(now: Instant) -> Engine<TestRuntime> {
         HashMap::new(),
         false,
     );
-    let udp_options = udp::Options::default();
+    let udp_options = udp::UdpConfig::default();
     let tcp_options = tcp::Options::<TestRuntime>::default();
 
     let rt = TestRuntime::new(
