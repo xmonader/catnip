@@ -7,7 +7,7 @@
 
 /// Control Options for UDP
 #[derive(Clone, Debug)]
-pub struct UdpOptions {
+pub struct UdpConfig {
     /// Enable checksum offload on receiver side?
     rx_checksum: bool,
     /// Enable checksum offload on sender side?
@@ -18,8 +18,8 @@ pub struct UdpOptions {
 // Associate Functions
 //==============================================================================
 
-/// Associate functions for [UdpOptions].
-impl UdpOptions {
+/// Associate functions for [UdpConfig].
+impl UdpConfig {
     /// Creates custom options for UDP.
     pub fn new(rx_checksum: bool, tx_checksum: bool) -> Self {
         Self {
@@ -43,11 +43,11 @@ impl UdpOptions {
 // Trait Implementations
 //==============================================================================
 
-/// Implementation of [Default] trait for [UdpOptions].
-impl Default for UdpOptions {
+/// Implementation of [Default] trait for [UdpConfig].
+impl Default for UdpConfig {
     /// Creates default options for UDP.
     fn default() -> Self {
-        UdpOptions {
+        UdpConfig {
             rx_checksum: false,
             tx_checksum: false,
         }
@@ -60,18 +60,18 @@ impl Default for UdpOptions {
 
 #[cfg(test)]
 mod tests {
-    use super::UdpOptions;
+    use super::UdpConfig;
 
-    /// Tests instantiations flavors for [UdpOptions].
+    /// Tests instantiations flavors for [UdpConfig].
     #[test]
     fn test_udp_options() {
         //Default options.
-        let options_default = UdpOptions::default();
+        let options_default = UdpConfig::default();
         assert!(!options_default.rx_checksum());
         assert!(!options_default.tx_checksum());
 
         // Custom options.
-        let options_custom = UdpOptions::new(true, true);
+        let options_custom = UdpConfig::new(true, true);
         assert!(options_custom.rx_checksum());
         assert!(options_custom.tx_checksum());
     }
