@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use super::listener::Listener;
+use super::listener::SharedListener;
 
 use crate::{
     fail::Fail, futures::result::FutureResult, operations::OperationResult, protocols::ipv4,
@@ -9,10 +9,8 @@ use crate::{
 };
 
 use std::{
-    cell::RefCell,
     future::Future,
     pin::Pin,
-    rc::Rc,
     task::{Context, Poll},
 };
 
@@ -25,7 +23,7 @@ pub struct PopFuture<RT: Runtime> {
     /// File descriptor.
     fd: IoQueueDescriptor,
     /// Listener.
-    listener: Result<Rc<RefCell<Listener<RT::Buf>>>, Fail>,
+    listener: Result<SharedListener<RT::Buf>, Fail>,
 }
 
 /// Operations on UDP Layer
@@ -65,10 +63,7 @@ impl<RT: Runtime> UdpOperation<RT> {
 /// Associate functions for [PopFuture].
 impl<RT: Runtime> PopFuture<RT> {
     /// Creates a future for the pop operation.
-    pub fn new(
-        fd: IoQueueDescriptor,
-        listener: Result<Rc<RefCell<Listener<RT::Buf>>>, Fail>,
-    ) -> Self {
+    pub fn new(fd: IoQueueDescriptor, listener: Result<SharedListener<RT::Buf>, Fail>) -> Self {
         Self { fd, listener }
     }
 }
@@ -83,10 +78,9 @@ impl<RT: Runtime> Future for PopFuture<RT> {
 
     fn poll(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Self::Output> {
         let self_ = self.get_mut();
-        match self_.listener {
+        match self_.listener.clone() {
             Err(ref e) => Poll::Ready(Err(e.clone())),
-            Ok(ref l) => {
-                let mut listener = l.borrow_mut();
+            Ok(listener) => {
                 if let Some(r) = listener.pop_data() {
                     return Poll::Ready(Ok(r));
                 }

@@ -3,56 +3,93 @@
 
 use crate::protocols::ipv4;
 
-use std::{collections::VecDeque, task::Waker};
+use std::{cell::RefCell, collections::VecDeque, rc::Rc, task::Waker};
 
-pub struct Listener<T> {
+//==============================================================================
+// Listener
+//==============================================================================
+
+struct Listener<T> {
     buf: VecDeque<(Option<ipv4::Endpoint>, T)>,
     waker: Option<Waker>,
 }
 
-//==============================================================================
-// Associate Functions
-//==============================================================================
-
-/// Associate functions for [Listener].
+/// Associate functions.
 impl<T> Listener<T> {
-    /// Creates a new listener.
-    pub fn new(buf: VecDeque<(Option<ipv4::Endpoint>, T)>, waker: Option<Waker>) -> Self {
-        Self { buf, waker }
-    }
-
-    /// Pushes data to the target listener.
-    pub fn push_data(&mut self, endpoint: Option<ipv4::Endpoint>, data: T) {
+    /// Pushes data to the target [Listener].
+    fn push_data(&mut self, endpoint: Option<ipv4::Endpoint>, data: T) {
         self.buf.push_back((endpoint, data));
     }
 
-    /// Pops data from the target listener.
-    pub fn pop_data(&mut self) -> Option<(Option<ipv4::Endpoint>, T)> {
+    /// Pops data from the target [Listener].
+    fn pop_data(&mut self) -> Option<(Option<ipv4::Endpoint>, T)> {
         self.buf.pop_front()
     }
 
-    /// Takes the waker of the target listener.
-    pub fn take_waker(&mut self) -> Option<Waker> {
+    /// Takes the waker value stored in the target [Listener].
+    fn take_waker(&mut self) -> Option<Waker> {
         self.waker.take()
     }
 
-    /// Places a waker in the target listener.
-    pub fn put_waker(&mut self, waker: Option<Waker>) {
+    /// Places a waker in the target [Listener].
+    fn put_waker(&mut self, waker: Option<Waker>) {
         self.waker = waker;
     }
 }
 
-//==============================================================================
-// Trait Implementations
-//==============================================================================
-
-/// Default trait implementation for [Listener].
+/// Default trait implementation.
 impl<T> Default for Listener<T> {
-    /// Creates a UDP socket with default values.
+    /// Creates a [Listener] with the default values.
     fn default() -> Self {
         Self {
             buf: VecDeque::new(),
             waker: None,
         }
+    }
+}
+//==============================================================================
+// SharedListener
+//==============================================================================
+
+#[derive(Clone)]
+pub struct SharedListener<T> {
+    l: Rc<RefCell<Listener<T>>>,
+}
+
+/// Associate functions.
+impl<T> SharedListener<T> {
+    fn new(l: Listener<T>) -> Self {
+        Self {
+            l: Rc::new(RefCell::new(l)),
+        }
+    }
+
+    /// Pushes data to the target [SharedListener].
+    pub fn push_data(&self, endpoint: Option<ipv4::Endpoint>, data: T) {
+        self.l.borrow_mut().push_data(endpoint, data);
+    }
+
+    /// Pops data from the target [SharedListener].
+    pub fn pop_data(&self) -> Option<(Option<ipv4::Endpoint>, T)> {
+        self.l.borrow_mut().pop_data()
+    }
+
+    /// Takes the waker value stored in the target [SharedListener].
+    pub fn take_waker(&self) -> Option<Waker> {
+        self.l.borrow_mut().take_waker()
+    }
+
+    /// Places a waker in the target [SharedListener].
+    pub fn put_waker(&self, waker: Option<Waker>) {
+        self.l.borrow_mut().put_waker(waker)
+    }
+}
+
+/// Default trait implementation.
+impl<T> Default for SharedListener<T> {
+    /// Creates a [SharedListener] with the default values.
+    fn default() -> Self {
+        let l = Listener::<T>::default();
+        SharedListener::new(l)
     }
 }
