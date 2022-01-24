@@ -1,13 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use super::listener::SharedListener;
-
 use crate::{
-    fail::Fail, futures::result::FutureResult, operations::OperationResult, protocols::ipv4,
-    queue::IoQueueDescriptor, runtime::Runtime,
+    fail::Fail, futures::result::FutureResult, operations::OperationResult,
+    protocols::udp::UdpPopFuture, queue::IoQueueDescriptor, runtime::Runtime,
 };
-
 use std::{
     future::Future,
     pin::Pin,
@@ -18,19 +15,11 @@ use std::{
 // Constants & Structures
 //==============================================================================
 
-/// Future for Pop Operation
-pub struct PopFuture<RT: Runtime> {
-    /// File descriptor.
-    fd: IoQueueDescriptor,
-    /// Listener.
-    listener: Result<SharedListener<RT::Buf>, Fail>,
-}
-
 /// Operations on UDP Layer
 pub enum UdpOperation<RT: Runtime> {
     Connect(IoQueueDescriptor, Result<(), Fail>),
     Push(IoQueueDescriptor, Result<(), Fail>),
-    Pop(FutureResult<PopFuture<RT>>),
+    Pop(FutureResult<UdpPopFuture<RT>>),
 }
 
 //==============================================================================
@@ -49,48 +38,20 @@ impl<RT: Runtime> UdpOperation<RT> {
             UdpOperation::Pop(FutureResult {
                 future,
                 done: Some(Ok((addr, bytes))),
-            }) => (future.fd, OperationResult::Pop(addr, bytes)),
+            }) => (future.get_qd(), OperationResult::Pop(addr, bytes)),
             UdpOperation::Pop(FutureResult {
                 future,
                 done: Some(Err(e)),
-            }) => (future.fd, OperationResult::Failed(e)),
+            }) => (future.get_qd(), OperationResult::Failed(e)),
 
             _ => panic!("Future not ready"),
         }
     }
 }
 
-/// Associate functions for [PopFuture].
-impl<RT: Runtime> PopFuture<RT> {
-    /// Creates a future for the pop operation.
-    pub fn new(fd: IoQueueDescriptor, listener: Result<SharedListener<RT::Buf>, Fail>) -> Self {
-        Self { fd, listener }
-    }
-}
-
 //==============================================================================
 // Trait Implementations
 //==============================================================================
-
-/// Future trait implementation for [PopFuture].
-impl<RT: Runtime> Future for PopFuture<RT> {
-    type Output = Result<(Option<ipv4::Endpoint>, RT::Buf), Fail>;
-
-    fn poll(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Self::Output> {
-        let self_ = self.get_mut();
-        match self_.listener.clone() {
-            Err(ref e) => Poll::Ready(Err(e.clone())),
-            Ok(listener) => {
-                if let Some(r) = listener.pop_data() {
-                    return Poll::Ready(Ok(r));
-                }
-                let waker = ctx.waker();
-                listener.put_waker(Some(waker.clone()));
-                Poll::Pending
-            }
-        }
-    }
-}
 
 /// Future trait implementation for [UdpOperation]
 impl<RT: Runtime> Future for UdpOperation<RT> {
