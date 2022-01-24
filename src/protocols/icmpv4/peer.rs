@@ -9,7 +9,7 @@ use crate::{
         arp,
         ethernet2::frame::{EtherType2, Ethernet2Header},
         icmpv4::datagram::Icmpv4Message,
-        ipv4::datagram::{Ipv4Header, Ipv4Protocol2},
+        ipv4::{Ipv4Header, Ipv4Protocol2},
     },
     runtime::Runtime,
     scheduler::SchedulerHandle,
@@ -145,7 +145,7 @@ impl<RT: Runtime> Icmpv4Peer<RT> {
         match icmpv4_hdr.icmpv4_type {
             Icmpv4Type2::EchoRequest { id, seq_num } => {
                 self.tx
-                    .unbounded_send((ipv4_header.src_addr, id, seq_num))
+                    .unbounded_send((ipv4_header.src_addr(), id, seq_num))
                     .unwrap();
             }
             Icmpv4Type2::EchoReply { id, seq_num } => {

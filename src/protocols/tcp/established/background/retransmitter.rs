@@ -36,7 +36,7 @@ async fn retransmit<RT: Runtime>(
     };
 
     // Our retransmission timer fired, so we need to resend a packet.
-    let remote_link_addr = cb.arp().query(cb.get_remote().address()).await?;
+    let remote_link_addr = cb.arp().query(cb.get_remote().get_address()).await?;
 
     // Unset the initial timestamp so we don't use this for RTT estimation.
     segment.initial_tx.take();

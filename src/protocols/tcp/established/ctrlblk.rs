@@ -16,8 +16,8 @@ use crate::{
             frame::{EtherType2, Ethernet2Header},
             MacAddress,
         },
-        ipv4,
-        ipv4::datagram::{Ipv4Header, Ipv4Protocol2},
+        ipv4::Ipv4Endpoint,
+        ipv4::{Ipv4Header, Ipv4Protocol2},
         tcp::{
             segment::{TcpHeader, TcpSegment},
             SeqNumber,
@@ -142,8 +142,8 @@ impl<RT: Runtime> ReceiveQueue<RT> {
 
 /// Transmission control block for representing our TCP connection.
 pub struct ControlBlock<RT: Runtime> {
-    local: ipv4::Endpoint,
-    remote: ipv4::Endpoint,
+    local: Ipv4Endpoint,
+    remote: Ipv4Endpoint,
 
     rt: Rc<RT>,
     arp: Rc<arp::Peer<RT>>,
@@ -170,8 +170,8 @@ pub struct ControlBlock<RT: Runtime> {
 
 impl<RT: Runtime> ControlBlock<RT> {
     pub fn new(
-        local: ipv4::Endpoint,
-        remote: ipv4::Endpoint,
+        local: Ipv4Endpoint,
+        remote: Ipv4Endpoint,
         rt: RT,
         arp: arp::Peer<RT>,
         receiver_seq_no: SeqNumber,
@@ -218,11 +218,11 @@ impl<RT: Runtime> ControlBlock<RT> {
         self.state.set(new_value)
     }
 
-    pub fn get_local(&self) -> ipv4::Endpoint {
+    pub fn get_local(&self) -> Ipv4Endpoint {
         self.local
     }
 
-    pub fn get_remote(&self) -> ipv4::Endpoint {
+    pub fn get_remote(&self) -> Ipv4Endpoint {
         self.remote
     }
 
@@ -403,7 +403,7 @@ impl<RT: Runtime> ControlBlock<RT> {
 
     /// Fetch a TCP header filling out various values based on our current state.
     pub fn tcp_header(&self) -> TcpHeader {
-        let mut header = TcpHeader::new(self.local.port, self.remote.port);
+        let mut header = TcpHeader::new(self.local.get_port(), self.remote.get_port());
         header.window_size = self.hdr_window_size();
 
         // Check if we have acknowledged all bytes that we have received. If not, piggy back an ACK
@@ -439,7 +439,11 @@ impl<RT: Runtime> ControlBlock<RT> {
                 src_addr: self.rt.local_link_addr(),
                 ether_type: EtherType2::Ipv4,
             },
-            ipv4_hdr: Ipv4Header::new(self.local.addr, self.remote.addr, Ipv4Protocol2::Tcp),
+            ipv4_hdr: Ipv4Header::new(
+                self.local.get_address(),
+                self.remote.get_address(),
+                Ipv4Protocol2::Tcp,
+            ),
             tcp_hdr: header,
             data,
             tx_checksum_offload: self.rt.tcp_options().tx_checksum_offload(),

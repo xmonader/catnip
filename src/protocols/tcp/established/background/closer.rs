@@ -34,7 +34,7 @@ async fn active_send_fin<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fai
         }
 
         // TODO: When do we retransmit this?
-        let remote_link_addr = cb.arp().query(cb.get_remote().address()).await?;
+        let remote_link_addr = cb.arp().query(cb.get_remote().get_address()).await?;
         let mut header = cb.tcp_header();
         header.seq_num = sent_seq;
         header.fin = true;
@@ -64,7 +64,7 @@ async fn active_ack_fin<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fail
         }
 
         // Send ACK segment for FIN.
-        let remote_link_addr = cb.arp().query(cb.get_remote().address()).await?;
+        let remote_link_addr = cb.arp().query(cb.get_remote().get_address()).await?;
         let mut header = cb.tcp_header();
 
         // ACK replies to FIN are special as their ack sequence number should be set to +1 the
@@ -119,7 +119,7 @@ async fn passive_close<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fail>
         }
 
         // Send ACK segment for FIN.
-        let remote_link_addr = cb.arp().query(cb.get_remote().address()).await?;
+        let remote_link_addr = cb.arp().query(cb.get_remote().get_address()).await?;
         let mut header = cb.tcp_header();
         header.ack = true;
         header.ack_num = recv_seq + SeqNumber::from(1);
@@ -148,7 +148,7 @@ async fn passive_send_fin<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fa
             continue;
         }
 
-        let remote_link_addr = cb.arp().query(cb.get_remote().address()).await?;
+        let remote_link_addr = cb.arp().query(cb.get_remote().get_address()).await?;
         let mut header = cb.tcp_header();
         header.seq_num = sent_seq;
         header.fin = true;

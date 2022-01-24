@@ -5,7 +5,7 @@ use crate::{
     collections::bytes::{Bytes, BytesMut},
     protocols::{
         ip::{self},
-        ipv4::{self},
+        ipv4::Ipv4Endpoint,
         tcp::{
             operations::PushFuture,
             tests::{
@@ -292,7 +292,7 @@ pub fn test_send_recv_loop() {
 
     // Connection parameters
     let listen_port: ip::Port = ip::Port::try_from(80).unwrap();
-    let listen_addr: ipv4::Endpoint = ipv4::Endpoint::new(test_helpers::BOB_IPV4, listen_port);
+    let listen_addr: Ipv4Endpoint = Ipv4Endpoint::new(test_helpers::BOB_IPV4, listen_port);
 
     // Setup peers.
     let mut server: Engine<TestRuntime> = test_helpers::new_bob2(now);
@@ -338,7 +338,7 @@ pub fn test_send_recv_round_loop() {
 
     // Connection parameters
     let listen_port: ip::Port = ip::Port::try_from(80).unwrap();
-    let listen_addr: ipv4::Endpoint = ipv4::Endpoint::new(test_helpers::BOB_IPV4, listen_port);
+    let listen_addr: Ipv4Endpoint = Ipv4Endpoint::new(test_helpers::BOB_IPV4, listen_port);
 
     // Setup peers.
     let mut server: Engine<TestRuntime> = test_helpers::new_bob2(now);
@@ -387,7 +387,7 @@ pub fn test_send_recv_with_delay() {
 
     // Connection parameters
     let listen_port: ip::Port = ip::Port::try_from(80).unwrap();
-    let listen_addr: ipv4::Endpoint = ipv4::Endpoint::new(test_helpers::BOB_IPV4, listen_port);
+    let listen_addr: Ipv4Endpoint = Ipv4Endpoint::new(test_helpers::BOB_IPV4, listen_port);
 
     // Setup peers.
     let mut server: Engine<TestRuntime> = test_helpers::new_bob2(now);
@@ -474,7 +474,7 @@ fn test_connect_disconnect() {
 
     // Connection parameters
     let listen_port: ip::Port = ip::Port::try_from(80).unwrap();
-    let listen_addr: ipv4::Endpoint = ipv4::Endpoint::new(test_helpers::BOB_IPV4, listen_port);
+    let listen_addr: Ipv4Endpoint = Ipv4Endpoint::new(test_helpers::BOB_IPV4, listen_port);
 
     // Setup peers.
     let mut server: Engine<TestRuntime> = test_helpers::new_bob2(now);

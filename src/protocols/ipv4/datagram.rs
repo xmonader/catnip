@@ -1,41 +1,19 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::{fail::Fail, runtime::RuntimeBuf};
+use crate::{fail::Fail, protocols::ipv4::Ipv4Protocol2, runtime::RuntimeBuf};
 use byteorder::{ByteOrder, NetworkEndian};
-use num_traits::FromPrimitive;
 use std::{
     convert::{TryFrom, TryInto},
     net::Ipv4Addr,
 };
 
-pub const IPV4_HEADER_SIZE: usize = 20;
+const IPV4_HEADER_SIZE: usize = 20;
 
 // todo: need citation
-pub const DEFAULT_IPV4_TTL: u8 = 255;
-pub const IPV4_IHL_NO_OPTIONS: u8 = 5;
-pub const IPV4_VERSION: u8 = 4;
-
-#[repr(u8)]
-#[derive(FromPrimitive, Copy, Clone, PartialEq, Eq, Debug)]
-pub enum Ipv4Protocol2 {
-    Icmpv4 = 0x01,
-    Tcp = 0x06,
-    Udp = 0x11,
-}
-
-impl TryFrom<u8> for Ipv4Protocol2 {
-    type Error = Fail;
-
-    fn try_from(n: u8) -> Result<Self, Fail> {
-        match FromPrimitive::from_u8(n) {
-            Some(n) => Ok(n),
-            None => Err(Fail::Unsupported {
-                details: "Unsupported IPv4 protocol",
-            }),
-        }
-    }
-}
+const DEFAULT_IPV4_TTL: u8 = 255;
+const IPV4_IHL_NO_OPTIONS: u8 = 5;
+const IPV4_VERSION: u8 = 4;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Ipv4Header {
@@ -46,24 +24,24 @@ pub struct Ipv4Header {
     // pub ihl: u8,
 
     // [ DSCP 6 bits ] [ ECN 2 bits ]
-    pub dscp: u8,
-    pub ecn: u8,
+    dscp: u8,
+    ecn: u8,
 
     // Omit the total_length since it's generated on serialization.
     // pub total_length: u16,
-    pub identification: u16,
+    identification: u16,
 
     // [ flags 3 bits ] [ fragment offset 13 bits ]
-    pub flags: u8,
-    pub fragment_offset: u16,
+    flags: u8,
+    fragment_offset: u16,
 
-    pub time_to_live: u8,
-    pub protocol: Ipv4Protocol2,
+    time_to_live: u8,
+    protocol: Ipv4Protocol2,
 
     // We omit the header checksum since it's checked when parsing and computed when serializing.
     // header_checksum: u16,
-    pub src_addr: Ipv4Addr,
-    pub dst_addr: Ipv4Addr,
+    src_addr: Ipv4Addr,
+    dst_addr: Ipv4Addr,
 }
 
 fn ipv4_checksum(buf: &[u8]) -> u16 {
@@ -216,5 +194,17 @@ impl Ipv4Header {
 
         let checksum = ipv4_checksum(buf);
         NetworkEndian::write_u16(&mut buf[10..12], checksum);
+    }
+
+    pub fn src_addr(&self) -> Ipv4Addr {
+        self.src_addr
+    }
+
+    pub fn dst_addr(&self) -> Ipv4Addr {
+        self.dst_addr
+    }
+
+    pub fn protocol(&self) -> Ipv4Protocol2 {
+        self.protocol
     }
 }

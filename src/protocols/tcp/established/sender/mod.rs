@@ -173,7 +173,7 @@ impl<RT: Runtime> Sender<RT> {
                 && win_sz >= in_flight_after_send
                 && effective_cwnd >= in_flight_after_send
             {
-                if let Some(remote_link_addr) = cb.arp().try_query(cb.get_remote().address()) {
+                if let Some(remote_link_addr) = cb.arp().try_query(cb.get_remote().get_address()) {
                     // This hook is primarily intended to record the last time we sent data, so we can later tell if the connection has been idle
 
                     let rto: Duration = self.current_rto();

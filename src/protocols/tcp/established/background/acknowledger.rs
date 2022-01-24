@@ -36,7 +36,7 @@ pub async fn acknowledger<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fa
                 let (ack_seq_no, _) = cb.get_ack_seq_no();
                 assert_ne!(ack_seq_no, recv_seq_no);
 
-                let remote_link_addr = cb.arp().query(cb.get_remote().address()).await?;
+                let remote_link_addr = cb.arp().query(cb.get_remote().get_address()).await?;
 
                 let mut header = cb.tcp_header();
                 header.ack = true;

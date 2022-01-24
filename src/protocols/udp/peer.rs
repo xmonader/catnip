@@ -15,8 +15,8 @@ use crate::{
             frame::{EtherType2, Ethernet2Header},
             MacAddress,
         },
-        ipv4::datagram::{Ipv4Header, Ipv4Protocol2},
-        ipv4::Endpoint,
+        ipv4::Ipv4Endpoint,
+        ipv4::{Ipv4Header, Ipv4Protocol2},
     },
     queue::IoQueueDescriptor,
     runtime::Runtime,
@@ -32,7 +32,7 @@ use perftools::timer;
 // Constants & Structures
 //==============================================================================
 
-type OutgoingReq<T> = (Option<Endpoint>, Endpoint, T);
+type OutgoingReq<T> = (Option<Ipv4Endpoint>, Ipv4Endpoint, T);
 type OutgoingSender<T> = mpsc::UnboundedSender<OutgoingReq<T>>;
 type OutgoingReceiver<T> = mpsc::UnboundedReceiver<OutgoingReq<T>>;
 
@@ -48,7 +48,7 @@ pub struct UdpPeer<RT: Runtime> {
     arp: arp::Peer<RT>,
 
     sockets: HashMap<IoQueueDescriptor, UdpSocket>,
-    bound: HashMap<Endpoint, SharedListener<RT::Buf>>,
+    bound: HashMap<Ipv4Endpoint, SharedListener<RT::Buf>>,
     outgoing: OutgoingSender<RT::Buf>,
 
     #[allow(unused)]
@@ -79,7 +79,7 @@ impl<RT: Runtime> UdpPeer<RT> {
     async fn background(rt: RT, arp: arp::Peer<RT>, mut rx: OutgoingReceiver<RT::Buf>) {
         while let Some((local, remote, buf)) = rx.next().await {
             let r: Result<_, Fail> = try {
-                let link_addr = arp.query(remote.addr).await?;
+                let link_addr = arp.query(remote.get_address()).await?;
                 Self::do_send(rt.clone(), link_addr, buf, local, remote);
             };
             if let Err(e) = r {
@@ -108,7 +108,7 @@ impl<RT: Runtime> UdpPeer<RT> {
     }
 
     /// Binds a socket to a local endpoint address.
-    pub fn do_bind(&mut self, fd: IoQueueDescriptor, addr: Endpoint) -> Result<(), Fail> {
+    pub fn do_bind(&mut self, fd: IoQueueDescriptor, addr: Ipv4Endpoint) -> Result<(), Fail> {
         #[cfg(feature = "profiler")]
         timer!("udp::bind");
 
@@ -168,10 +168,10 @@ impl<RT: Runtime> UdpPeer<RT> {
             UdpHeader::parse(ipv4_header, buf, self.rt.udp_options().get_rx_checksum())?;
         debug!("UDP received {:?}", hdr);
 
-        let local: Endpoint = Endpoint::new(ipv4_header.dst_addr, hdr.dest_port());
-        let remote: Option<Endpoint> = hdr
+        let local: Ipv4Endpoint = Ipv4Endpoint::new(ipv4_header.dst_addr(), hdr.dest_port());
+        let remote: Option<Ipv4Endpoint> = hdr
             .src_port()
-            .map(|p| Endpoint::new(ipv4_header.src_addr, p));
+            .map(|p| Ipv4Endpoint::new(ipv4_header.src_addr(), p));
 
         // TODO: Send ICMPv4 error in this condition.
         let listener = self.bound.get_mut(&local).ok_or(Fail::Malformed {
@@ -188,17 +188,22 @@ impl<RT: Runtime> UdpPeer<RT> {
     }
 
     /// Pushes data to a remote UDP peer.
-    pub fn do_pushto(&self, fd: IoQueueDescriptor, buf: RT::Buf, to: Endpoint) -> Result<(), Fail> {
+    pub fn do_pushto(
+        &self,
+        fd: IoQueueDescriptor,
+        buf: RT::Buf,
+        to: Ipv4Endpoint,
+    ) -> Result<(), Fail> {
         #[cfg(feature = "profiler")]
         timer!("udp::pushto");
 
-        let local: Option<Endpoint> = match self.sockets.get(&fd) {
+        let local: Option<Ipv4Endpoint> = match self.sockets.get(&fd) {
             Some(s) if s.get_local().is_some() => s.get_local(),
             _ => return Err(Fail::BadFileDescriptor {}),
         };
 
         // Try to send the packet immediately.
-        if let Some(link_addr) = self.arp.try_query(to.addr) {
+        if let Some(link_addr) = self.arp.try_query(to.get_address()) {
             Self::do_send(self.rt.clone(), link_addr, buf, local, to);
         }
         // Defer send operation to the async path.
@@ -214,10 +219,10 @@ impl<RT: Runtime> UdpPeer<RT> {
         rt: RT,
         link_addr: MacAddress,
         buf: RT::Buf,
-        local: Option<Endpoint>,
-        remote: Endpoint,
+        local: Option<Ipv4Endpoint>,
+        remote: Ipv4Endpoint,
     ) {
-        let udp_header = UdpHeader::new(local.map(|l| l.port), remote.port);
+        let udp_header = UdpHeader::new(local.map(|l| l.get_port()), remote.get_port());
         debug!("UDP send {:?}", udp_header);
         let datagram = UdpDatagram::new(
             Ethernet2Header {
@@ -225,7 +230,11 @@ impl<RT: Runtime> UdpPeer<RT> {
                 src_addr: rt.local_link_addr(),
                 ether_type: EtherType2::Ipv4,
             },
-            Ipv4Header::new(rt.local_ipv4_addr(), remote.addr, Ipv4Protocol2::Udp),
+            Ipv4Header::new(
+                rt.local_ipv4_addr(),
+                remote.get_address(),
+                Ipv4Protocol2::Udp,
+            ),
             udp_header,
             buf,
             rt.udp_options().get_tx_checksum(),

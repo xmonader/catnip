@@ -2,7 +2,9 @@
 // Licensed under the MIT license.
 
 use super::super::listener::SharedListener;
-use crate::{fail::Fail, protocols::ipv4, queue::IoQueueDescriptor, runtime::Runtime};
+use crate::{
+    fail::Fail, protocols::ipv4::Ipv4Endpoint, queue::IoQueueDescriptor, runtime::Runtime,
+};
 use std::{
     future::Future,
     pin::Pin,
@@ -44,7 +46,7 @@ impl<RT: Runtime> UdpPopFuture<RT> {
 
 /// Future trait implementation for [PopFuture].
 impl<RT: Runtime> Future for UdpPopFuture<RT> {
-    type Output = Result<(Option<ipv4::Endpoint>, RT::Buf), Fail>;
+    type Output = Result<(Option<Ipv4Endpoint>, RT::Buf), Fail>;
 
     fn poll(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Self::Output> {
         let self_ = self.get_mut();

@@ -4,7 +4,7 @@
 mod header;
 
 use crate::{
-    protocols::{ethernet2::frame::Ethernet2Header, ipv4::datagram::Ipv4Header},
+    protocols::{ethernet2::frame::Ethernet2Header, ipv4::Ipv4Header},
     runtime::PacketBuf,
     runtime::RuntimeBuf,
 };

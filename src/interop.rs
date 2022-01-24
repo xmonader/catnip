@@ -97,8 +97,8 @@ impl dmtr_qresult_t {
             OperationResult::Pop(addr, bytes) => {
                 let mut sga = rt.into_sgarray(bytes);
                 if let Some(addr) = addr {
-                    sga.sga_addr.sin_port = addr.port.into();
-                    sga.sga_addr.sin_addr.s_addr = u32::from_le_bytes(addr.addr.octets());
+                    sga.sga_addr.sin_port = addr.get_port().into();
+                    sga.sga_addr.sin_addr.s_addr = u32::from_le_bytes(addr.get_address().octets());
                 }
                 let qr_value = dmtr_qr_value_t { sga };
                 Self {

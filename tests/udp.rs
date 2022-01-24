@@ -8,7 +8,7 @@
 
 use catnip::{
     interop::dmtr_opcode_t,
-    protocols::{ip, ipv4},
+    protocols::{ip, ipv4::Ipv4Endpoint},
     runtime::Runtime,
 };
 
@@ -34,7 +34,7 @@ fn udp_connect_remote() {
     let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, tx, rx, arp());
 
     let port = ip::Port::try_from(PORT_BASE).unwrap();
-    let local = ipv4::Endpoint::new(ALICE_IPV4, port);
+    let local = Ipv4Endpoint::new(ALICE_IPV4, port);
 
     // Open and close a connection.
     let sockfd = libos.socket(libc::AF_INET, libc::SOCK_DGRAM, 0).unwrap();
@@ -49,7 +49,7 @@ fn udp_connect_loopback() {
     let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, tx, rx, arp());
 
     let port = ip::Port::try_from(PORT_BASE).unwrap();
-    let local = ipv4::Endpoint::new(ALICE_IPV4, port);
+    let local = Ipv4Endpoint::new(ALICE_IPV4, port);
 
     // Open and close a connection.
     let sockfd = libos.socket(libc::AF_INET, libc::SOCK_DGRAM, 0).unwrap();
@@ -69,9 +69,9 @@ fn udp_push_remote() {
     let (bob_tx, bob_rx) = crossbeam_channel::unbounded();
 
     let bob_port = ip::Port::try_from(PORT_BASE).unwrap();
-    let bob_addr = ipv4::Endpoint::new(BOB_IPV4, bob_port);
+    let bob_addr = Ipv4Endpoint::new(BOB_IPV4, bob_port);
     let alice_port = ip::Port::try_from(PORT_BASE).unwrap();
-    let alice_addr = ipv4::Endpoint::new(ALICE_IPV4, alice_port);
+    let alice_addr = Ipv4Endpoint::new(ALICE_IPV4, alice_port);
 
     let alice = thread::spawn(move || {
         let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, alice_tx, bob_rx, arp());
@@ -140,9 +140,9 @@ fn udp_lookback() {
     let (bob_tx, bob_rx) = crossbeam_channel::unbounded();
 
     let bob_port = ip::Port::try_from(PORT_BASE).unwrap();
-    let bob_addr = ipv4::Endpoint::new(ALICE_IPV4, bob_port);
+    let bob_addr = Ipv4Endpoint::new(ALICE_IPV4, bob_port);
     let alice_port = ip::Port::try_from(PORT_BASE).unwrap();
-    let alice_addr = ipv4::Endpoint::new(ALICE_IPV4, alice_port);
+    let alice_addr = Ipv4Endpoint::new(ALICE_IPV4, alice_port);
 
     let alice = thread::spawn(move || {
         let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, alice_tx, bob_rx, arp());

@@ -1,14 +1,15 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-// mod checksum;
-pub mod datagram;
+mod datagram;
 mod endpoint;
 mod peer;
+mod protocol;
 
 #[cfg(test)]
 mod tests;
 
-pub use datagram::{Ipv4Header, Ipv4Protocol2};
-pub use endpoint::Ipv4Endpoint as Endpoint;
-pub use peer::Ipv4Peer as Peer;
+pub use datagram::Ipv4Header;
+pub use endpoint::Ipv4Endpoint;
+pub use peer::Ipv4Peer;
+pub use protocol::Ipv4Protocol2;

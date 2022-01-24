@@ -15,7 +15,7 @@ use crate::{
     protocols::{
         arp,
         ethernet2::{EtherType2, Ethernet2Header},
-        ipv4::{self, Endpoint},
+        ipv4::{Ipv4Endpoint, Ipv4Peer},
     },
     queue::{IoQueueDescriptor, IoQueueTable, IoQueueType},
     runtime::Runtime,
@@ -36,7 +36,7 @@ pub type QToken = u64;
 
 pub struct LibOS<RT: Runtime> {
     arp: arp::Peer<RT>,
-    ipv4: ipv4::Peer<RT>,
+    ipv4: Ipv4Peer<RT>,
     file_table: IoQueueTable,
     rt: RT,
     ts_iters: usize,
@@ -47,7 +47,7 @@ impl<RT: Runtime> LibOS<RT> {
         let now = rt.now();
         let file_table = IoQueueTable::new();
         let arp = arp::Peer::new(now, rt.clone(), rt.arp_options())?;
-        let ipv4 = ipv4::Peer::new(rt.clone(), arp.clone());
+        let ipv4 = Ipv4Peer::new(rt.clone(), arp.clone());
         Ok(Self {
             arp,
             ipv4,
@@ -123,7 +123,7 @@ impl<RT: Runtime> LibOS<RT> {
     /// Upon successful completion, `Ok(())` is returned. Upon failure, `Fail` is
     /// returned instead.
     ///
-    pub fn bind(&mut self, fd: IoQueueDescriptor, local: Endpoint) -> Result<(), Fail> {
+    pub fn bind(&mut self, fd: IoQueueDescriptor, local: Ipv4Endpoint) -> Result<(), Fail> {
         #[cfg(feature = "profiler")]
         timer!("catnip::bind");
         trace!("bind(): fd={:?} local={:?}", fd, local);
@@ -206,7 +206,7 @@ impl<RT: Runtime> LibOS<RT> {
     /// remote endpoints. Upon failure, `Fail` is
     /// returned instead.
     ///
-    pub fn connect(&mut self, fd: IoQueueDescriptor, remote: Endpoint) -> Result<QToken, Fail> {
+    pub fn connect(&mut self, fd: IoQueueDescriptor, remote: Ipv4Endpoint) -> Result<QToken, Fail> {
         #[cfg(feature = "profiler")]
         timer!("catnip::connect");
         trace!("connect(): fd={:?} remote={:?}", fd, remote);
@@ -299,7 +299,7 @@ impl<RT: Runtime> LibOS<RT> {
         &mut self,
         fd: IoQueueDescriptor,
         buf: RT::Buf,
-        to: ipv4::Endpoint,
+        to: Ipv4Endpoint,
     ) -> Result<FutureOperation<RT>, Fail> {
         match self.file_table.get(fd) {
             Some(IoQueueType::UdpSocket) => {
@@ -314,7 +314,7 @@ impl<RT: Runtime> LibOS<RT> {
         &mut self,
         fd: IoQueueDescriptor,
         sga: &dmtr_sgarray_t,
-        to: Endpoint,
+        to: Ipv4Endpoint,
     ) -> Result<QToken, Fail> {
         #[cfg(feature = "profiler")]
         timer!("catnip::pushto");
@@ -332,7 +332,7 @@ impl<RT: Runtime> LibOS<RT> {
         &mut self,
         fd: IoQueueDescriptor,
         buf: RT::Buf,
-        to: Endpoint,
+        to: Ipv4Endpoint,
     ) -> Result<QToken, Fail> {
         #[cfg(feature = "profiler")]
         timer!("catnip::pushto2");

@@ -9,7 +9,7 @@ use crate::{
             frame::{EtherType2, Ethernet2Header},
             MacAddress,
         },
-        ipv4,
+        ipv4::{Ipv4Endpoint, Ipv4Peer},
         tcp::operations::{AcceptFuture, ConnectFuture, PopFuture, PushFuture},
         udp::UdpPopFuture,
     },
@@ -22,7 +22,7 @@ use std::{collections::HashMap, future::Future, net::Ipv4Addr, time::Duration};
 pub struct Engine<RT: Runtime> {
     rt: RT,
     pub arp: arp::Peer<RT>,
-    pub ipv4: ipv4::Peer<RT>,
+    pub ipv4: Ipv4Peer<RT>,
     pub file_table: IoQueueTable,
 }
 
@@ -31,7 +31,7 @@ impl<RT: Runtime> Engine<RT> {
         let now = rt.now();
         let file_table = IoQueueTable::new();
         let arp = arp::Peer::new(now, rt.clone(), rt.arp_options())?;
-        let ipv4 = ipv4::Peer::new(rt.clone(), arp.clone());
+        let ipv4 = Ipv4Peer::new(rt.clone(), arp.clone());
         Ok(Engine {
             rt,
             arp,
@@ -70,7 +70,7 @@ impl<RT: Runtime> Engine<RT> {
         &self,
         fd: IoQueueDescriptor,
         buf: RT::Buf,
-        to: ipv4::Endpoint,
+        to: Ipv4Endpoint,
     ) -> Result<(), Fail> {
         self.ipv4.udp.do_pushto(fd, buf, to)
     }
@@ -88,7 +88,7 @@ impl<RT: Runtime> Engine<RT> {
     pub fn udp_bind(
         &mut self,
         socket_fd: IoQueueDescriptor,
-        endpoint: ipv4::Endpoint,
+        endpoint: Ipv4Endpoint,
     ) -> Result<(), Fail> {
         self.ipv4.udp.do_bind(socket_fd, endpoint)
     }
@@ -106,7 +106,7 @@ impl<RT: Runtime> Engine<RT> {
     pub fn tcp_connect(
         &mut self,
         socket_fd: IoQueueDescriptor,
-        remote_endpoint: ipv4::Endpoint,
+        remote_endpoint: Ipv4Endpoint,
     ) -> ConnectFuture<RT> {
         self.ipv4.tcp.connect(socket_fd, remote_endpoint)
     }
@@ -114,7 +114,7 @@ impl<RT: Runtime> Engine<RT> {
     pub fn tcp_bind(
         &mut self,
         socket_fd: IoQueueDescriptor,
-        endpoint: ipv4::Endpoint,
+        endpoint: Ipv4Endpoint,
     ) -> Result<(), Fail> {
         self.ipv4.tcp.bind(socket_fd, endpoint)
     }
