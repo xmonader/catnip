@@ -1,12 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-pub mod frame;
+mod frame;
 mod mac_address;
+mod protocol;
 
-pub use mac_address::MacAddress;
-
-pub use frame::{EtherType2, Ethernet2Header};
-
-#[cfg(test)]
-pub use frame::MIN_PAYLOAD_SIZE;
+pub use self::frame::Ethernet2Header;
+pub use self::mac_address::MacAddress;
+pub use self::protocol::EtherType2;

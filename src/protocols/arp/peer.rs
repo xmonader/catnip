@@ -11,8 +11,7 @@ use crate::{
     fail::Fail,
     futures::UtilityMethods,
     protocols::ethernet2::{
-        frame::{EtherType2, Ethernet2Header},
-        MacAddress,
+        MacAddress, {EtherType2, Ethernet2Header},
     },
     runtime::Runtime,
     scheduler::SchedulerHandle,
@@ -152,11 +151,11 @@ impl<RT: Runtime> ArpPeer<RT> {
                 // > Swap hardware and protocol fields, putting the local
                 // > hardware and protocol addresses in the sender fields.
                 let reply = ArpMessage::new(
-                    Ethernet2Header {
-                        dst_addr: pdu.sender_hardware_addr,
-                        src_addr: self.rt.local_link_addr(),
-                        ether_type: EtherType2::Arp,
-                    },
+                    Ethernet2Header::new(
+                        pdu.sender_hardware_addr,
+                        self.rt.local_link_addr(),
+                        EtherType2::Arp,
+                    ),
                     ArpPdu::new(
                         ArpOperation::Reply,
                         self.rt.local_link_addr(),
@@ -196,11 +195,11 @@ impl<RT: Runtime> ArpPeer<RT> {
                 return Ok(link_addr);
             }
             let msg = ArpMessage::new(
-                Ethernet2Header {
-                    dst_addr: MacAddress::broadcast(),
-                    src_addr: rt.local_link_addr(),
-                    ether_type: EtherType2::Arp,
-                },
+                Ethernet2Header::new(
+                    MacAddress::broadcast(),
+                    rt.local_link_addr(),
+                    EtherType2::Arp,
+                ),
                 ArpPdu::new(
                     ArpOperation::Request,
                     rt.local_link_addr(),

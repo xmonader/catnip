@@ -6,8 +6,7 @@ use crate::{
     protocols::{
         arp,
         ethernet2::{
-            frame::{EtherType2, Ethernet2Header},
-            MacAddress,
+            MacAddress, {EtherType2, Ethernet2Header},
         },
         ipv4::{Ipv4Endpoint, Ipv4Peer},
         tcp::operations::{AcceptFuture, ConnectFuture, PopFuture, PushFuture},
@@ -47,12 +46,12 @@ impl<RT: Runtime> Engine<RT> {
     pub fn receive(&mut self, bytes: RT::Buf) -> Result<(), Fail> {
         let (header, payload) = Ethernet2Header::parse(bytes)?;
         debug!("Engine received {:?}", header);
-        if self.rt.local_link_addr() != header.dst_addr && !header.dst_addr.is_broadcast() {
+        if self.rt.local_link_addr() != header.dst_addr() && !header.dst_addr().is_broadcast() {
             return Err(Fail::Ignored {
                 details: "Physical dst_addr mismatch",
             });
         }
-        match header.ether_type {
+        match header.ether_type() {
             EtherType2::Arp => self.arp.receive(payload),
             EtherType2::Ipv4 => self.ipv4.receive(payload),
         }

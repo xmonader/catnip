@@ -13,8 +13,7 @@ use crate::{
     protocols::{
         arp,
         ethernet2::{
-            frame::{EtherType2, Ethernet2Header},
-            MacAddress,
+            MacAddress, {EtherType2, Ethernet2Header},
         },
         ipv4::Ipv4Endpoint,
         ipv4::{Ipv4Header, Ipv4Protocol2},
@@ -434,11 +433,11 @@ impl<RT: Runtime> ControlBlock<RT> {
 
         debug!("Sending {} bytes + {:?}", data.len(), header);
         let segment = TcpSegment {
-            ethernet2_hdr: Ethernet2Header {
-                dst_addr: remote_link_addr,
-                src_addr: self.rt.local_link_addr(),
-                ether_type: EtherType2::Ipv4,
-            },
+            ethernet2_hdr: Ethernet2Header::new(
+                remote_link_addr,
+                self.rt.local_link_addr(),
+                EtherType2::Ipv4,
+            ),
             ipv4_hdr: Ipv4Header::new(
                 self.local.get_address(),
                 self.remote.get_address(),

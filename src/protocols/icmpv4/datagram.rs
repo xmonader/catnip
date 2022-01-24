@@ -3,7 +3,7 @@
 
 use crate::{
     fail::Fail,
-    protocols::{ethernet2::frame::Ethernet2Header, ipv4::Ipv4Header},
+    protocols::{ethernet2::Ethernet2Header, ipv4::Ipv4Header},
     runtime::PacketBuf,
     runtime::RuntimeBuf,
 };

@@ -7,7 +7,7 @@ use crate::{
     futures::UtilityMethods,
     protocols::{
         arp,
-        ethernet2::frame::{EtherType2, Ethernet2Header},
+        ethernet2::{EtherType2, Ethernet2Header},
         icmpv4::datagram::Icmpv4Message,
         ipv4::{Ipv4Header, Ipv4Protocol2},
     },

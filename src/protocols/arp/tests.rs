@@ -5,7 +5,7 @@ use super::pdu::{ArpOperation, ArpPdu};
 
 use crate::{
     fail::Fail,
-    protocols::ethernet2::frame::Ethernet2Header,
+    protocols::ethernet2::Ethernet2Header,
     runtime::Runtime,
     test_helpers::{self, TestRuntime},
 };

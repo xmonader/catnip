@@ -12,8 +12,7 @@ use crate::{
     protocols::{
         arp,
         ethernet2::{
-            frame::{EtherType2, Ethernet2Header},
-            MacAddress,
+            MacAddress, {EtherType2, Ethernet2Header},
         },
         ipv4::Ipv4Endpoint,
         ipv4::{Ipv4Header, Ipv4Protocol2},
@@ -225,11 +224,7 @@ impl<RT: Runtime> UdpPeer<RT> {
         let udp_header = UdpHeader::new(local.map(|l| l.get_port()), remote.get_port());
         debug!("UDP send {:?}", udp_header);
         let datagram = UdpDatagram::new(
-            Ethernet2Header {
-                dst_addr: link_addr,
-                src_addr: rt.local_link_addr(),
-                ether_type: EtherType2::Ipv4,
-            },
+            Ethernet2Header::new(link_addr, rt.local_link_addr(), EtherType2::Ipv4),
             Ipv4Header::new(
                 rt.local_ipv4_addr(),
                 remote.get_address(),

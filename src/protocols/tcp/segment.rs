@@ -4,7 +4,7 @@
 use crate::{
     fail::Fail,
     protocols::{
-        ethernet2::frame::Ethernet2Header,
+        ethernet2::Ethernet2Header,
         ip,
         ipv4::{Ipv4Header, Ipv4Protocol2},
         tcp::SeqNumber,
