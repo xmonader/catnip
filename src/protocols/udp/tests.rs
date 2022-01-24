@@ -366,6 +366,9 @@ fn udp_udp_close_bad_file_descriptor() {
     // Setup Alice.
     let mut alice = test_helpers::new_alice2(now);
     let alice_fd: IoQueueDescriptor = alice.udp_socket().unwrap();
+    let alice_port = ip::Port::try_from(80).unwrap();
+    let alice_addr = ipv4::Endpoint::new(test_helpers::ALICE_IPV4, alice_port);
+    alice.udp_bind(alice_fd, alice_addr).unwrap();
 
     // Try to udp_close bad file descriptor.
     must_let!(let Err(err) = alice.udp_close(IoQueueDescriptor::try_from(usize::MAX).unwrap()));
@@ -396,7 +399,7 @@ fn udp_pop_not_bound() {
     let mut bob = test_helpers::new_bob2(now);
     let bob_port = ip::Port::try_from(80).unwrap();
     let bob_addr = ipv4::Endpoint::new(test_helpers::BOB_IPV4, bob_port);
-    let bob_fd: IoQueueDescriptor = bob.udp_socket().unwrap();
+    // Bob does not create a socket.
 
     // Send data to Bob.
     let buf = BytesMut::from(&vec![0x5a; 32][..]).freeze();
@@ -416,7 +419,7 @@ fn udp_pop_not_bound() {
 
     // Close peers.
     alice.udp_close(alice_fd).unwrap();
-    bob.udp_close(bob_fd).unwrap();
+    // Bob does not have a socket.
 }
 
 //==============================================================================

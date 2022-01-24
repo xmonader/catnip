@@ -6,14 +6,16 @@
 //! mechanisms.
 use crate::{
     fail::Fail,
-    futures::{operation::FutureOperation, FutureResult},
+    futures::{
+        operation::{FutureOperation, UdpOperation},
+        FutureResult,
+    },
     interop::{dmtr_qresult_t, dmtr_sgarray_t},
     operations::OperationResult,
     protocols::{
         arp,
         ethernet2::{EtherType2, Ethernet2Header},
         ipv4::{self, Endpoint},
-        udp::UdpOperation,
     },
     queue::{IoQueueDescriptor, IoQueueTable, IoQueueType},
     runtime::Runtime,
@@ -127,7 +129,7 @@ impl<RT: Runtime> LibOS<RT> {
         trace!("bind(): fd={:?} local={:?}", fd, local);
         match self.file_table.get(fd) {
             Some(IoQueueType::TcpSocket) => self.ipv4.tcp.bind(fd, local),
-            Some(IoQueueType::UdpSocket) => self.ipv4.udp.bind(fd, local),
+            Some(IoQueueType::UdpSocket) => self.ipv4.udp.do_bind(fd, local),
             _ => Err(Fail::BadFileDescriptor {}),
         }
     }
@@ -212,10 +214,6 @@ impl<RT: Runtime> LibOS<RT> {
             Some(IoQueueType::TcpSocket) => {
                 Ok(FutureOperation::from(self.ipv4.tcp.connect(fd, remote)))
             }
-            Some(IoQueueType::UdpSocket) => {
-                let udp_op = UdpOperation::<RT>::Connect(fd, self.ipv4.udp.connect(fd, remote));
-                Ok(FutureOperation::Udp(udp_op))
-            }
             _ => Err(Fail::BadFileDescriptor {}),
         }?;
 
@@ -261,10 +259,6 @@ impl<RT: Runtime> LibOS<RT> {
     ) -> Result<FutureOperation<RT>, Fail> {
         match self.file_table.get(fd) {
             Some(IoQueueType::TcpSocket) => Ok(FutureOperation::from(self.ipv4.tcp.push(fd, buf))),
-            Some(IoQueueType::UdpSocket) => {
-                let udp_op = UdpOperation::Push(fd, self.ipv4.udp.push(fd, buf));
-                Ok(FutureOperation::Udp(udp_op))
-            }
             _ => Err(Fail::BadFileDescriptor {}),
         }
     }
@@ -309,7 +303,7 @@ impl<RT: Runtime> LibOS<RT> {
     ) -> Result<FutureOperation<RT>, Fail> {
         match self.file_table.get(fd) {
             Some(IoQueueType::UdpSocket) => {
-                let udp_op = UdpOperation::Push(fd, self.ipv4.udp.pushto(fd, buf, to));
+                let udp_op = UdpOperation::Push(fd, self.ipv4.udp.do_pushto(fd, buf, to));
                 Ok(FutureOperation::Udp(udp_op))
             }
             _ => Err(Fail::BadFileDescriptor {}),
@@ -374,7 +368,7 @@ impl<RT: Runtime> LibOS<RT> {
         let future = match self.file_table.get(fd) {
             Some(IoQueueType::TcpSocket) => Ok(FutureOperation::from(self.ipv4.tcp.pop(fd))),
             Some(IoQueueType::UdpSocket) => {
-                let udp_op = UdpOperation::Pop(FutureResult::new(self.ipv4.udp.pop(fd), None));
+                let udp_op = UdpOperation::Pop(FutureResult::new(self.ipv4.udp.do_pop(fd), None));
                 Ok(FutureOperation::Udp(udp_op))
             }
             _ => Err(Fail::BadFileDescriptor {}),

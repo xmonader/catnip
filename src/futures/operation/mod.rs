@@ -1,10 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::{
-    protocols::{tcp::operations::TcpOperation, udp::UdpOperation},
-    runtime::Runtime,
-};
+pub mod udp;
+
+pub use self::udp::UdpOperation;
+
+use crate::{protocols::tcp::operations::TcpOperation, runtime::Runtime};
 use futures::Future;
 use std::{
     pin::Pin,

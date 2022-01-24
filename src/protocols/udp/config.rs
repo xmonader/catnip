@@ -29,12 +29,12 @@ impl UdpConfig {
     }
 
     /// Returns whether or not checksum offload on receiver side is enabled.
-    pub fn rx_checksum(&self) -> bool {
+    pub fn get_rx_checksum(&self) -> bool {
         self.rx_checksum
     }
 
     /// Returns whether or not checksum offload on sender side is enabled.
-    pub fn tx_checksum(&self) -> bool {
+    pub fn get_tx_checksum(&self) -> bool {
         self.tx_checksum
     }
 }
@@ -67,12 +67,12 @@ mod tests {
     fn test_udp_options() {
         //Default options.
         let options_default = UdpConfig::default();
-        assert!(!options_default.rx_checksum());
-        assert!(!options_default.tx_checksum());
+        assert!(!options_default.get_rx_checksum());
+        assert!(!options_default.get_tx_checksum());
 
         // Custom options.
         let options_custom = UdpConfig::new(true, true);
-        assert!(options_custom.rx_checksum());
-        assert!(options_custom.tx_checksum());
+        assert!(options_custom.get_rx_checksum());
+        assert!(options_custom.get_tx_checksum());
     }
 }

@@ -66,21 +66,17 @@ impl<RT: Runtime> Engine<RT> {
         self.ipv4.ping(dest_ipv4_addr, timeout)
     }
 
-    pub fn udp_push(&mut self, fd: IoQueueDescriptor, buf: RT::Buf) -> Result<(), Fail> {
-        self.ipv4.udp.push(fd, buf)
-    }
-
     pub fn udp_pushto(
         &self,
         fd: IoQueueDescriptor,
         buf: RT::Buf,
         to: ipv4::Endpoint,
     ) -> Result<(), Fail> {
-        self.ipv4.udp.pushto(fd, buf, to)
+        self.ipv4.udp.do_pushto(fd, buf, to)
     }
 
     pub fn udp_pop(&mut self, fd: IoQueueDescriptor) -> UdpPopFuture<RT> {
-        self.ipv4.udp.pop(fd)
+        self.ipv4.udp.do_pop(fd)
     }
 
     pub fn udp_socket(&mut self) -> Result<IoQueueDescriptor, Fail> {
@@ -94,7 +90,7 @@ impl<RT: Runtime> Engine<RT> {
         socket_fd: IoQueueDescriptor,
         endpoint: ipv4::Endpoint,
     ) -> Result<(), Fail> {
-        self.ipv4.udp.bind(socket_fd, endpoint)
+        self.ipv4.udp.do_bind(socket_fd, endpoint)
     }
 
     pub fn udp_close(&mut self, socket_fd: IoQueueDescriptor) -> Result<(), Fail> {

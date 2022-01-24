@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::protocols::ipv4;
+use crate::protocols::ipv4::Endpoint;
 
 //==============================================================================
 // Constants & Structures
@@ -9,28 +9,24 @@ use crate::protocols::ipv4;
 
 /// UDP Socket
 #[derive(Debug)]
-pub struct Socket {
+pub struct UdpSocket {
     /// Local endpoint.
-    local: Option<ipv4::Endpoint>,
-    /// Remote endpoint.
-    remote: Option<ipv4::Endpoint>,
+    local: Option<Endpoint>,
 }
 
 //==============================================================================
 // Associate Functions
 //==============================================================================
 
-// Associate functions for [Socket].
-impl Socket {
-    pub fn local(&self) -> Option<ipv4::Endpoint> {
+/// Associate functions.
+impl UdpSocket {
+    /// Gets the local endpoint of the target [UdpSocket].
+    pub fn get_local(&self) -> Option<Endpoint> {
         self.local
     }
 
-    pub fn remote(&self) -> Option<ipv4::Endpoint> {
-        self.remote
-    }
-
-    pub fn set_local(&mut self, local: Option<ipv4::Endpoint>) {
+    /// Sets the local endpoint of the target [UdpSocket].
+    pub fn set_local(&mut self, local: Option<Endpoint>) {
         self.local = local;
     }
 }
@@ -39,13 +35,10 @@ impl Socket {
 // Trait Implementations
 //==============================================================================
 
-/// Default trait implementation for [Socket].
-impl Default for Socket {
-    /// Creates a UDP socket with default values.
+/// Default trait implementation.
+impl Default for UdpSocket {
+    /// Creates a [UdpSocket] with default values.
     fn default() -> Self {
-        Self {
-            local: None,
-            remote: None,
-        }
+        Self { local: None }
     }
 }
