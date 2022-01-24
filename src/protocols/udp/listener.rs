@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::protocols::ipv4::Endpoint;
+use crate::protocols::ipv4::Ipv4Endpoint;
 use std::{cell::RefCell, collections::VecDeque, rc::Rc, task::Waker};
 
 //==============================================================================
@@ -10,19 +10,19 @@ use std::{cell::RefCell, collections::VecDeque, rc::Rc, task::Waker};
 
 /// UDP Listener
 struct Listener<T> {
-    buf: VecDeque<(Option<Endpoint>, T)>,
+    buf: VecDeque<(Option<Ipv4Endpoint>, T)>,
     waker: Option<Waker>,
 }
 
 /// Associate functions.
 impl<T> Listener<T> {
     /// Pushes data to the target [Listener].
-    fn push_data(&mut self, endpoint: Option<Endpoint>, data: T) {
+    fn push_data(&mut self, endpoint: Option<Ipv4Endpoint>, data: T) {
         self.buf.push_back((endpoint, data));
     }
 
     /// Pops data from the target [Listener].
-    fn pop_data(&mut self) -> Option<(Option<Endpoint>, T)> {
+    fn pop_data(&mut self) -> Option<(Option<Ipv4Endpoint>, T)> {
         self.buf.pop_front()
     }
 
@@ -65,12 +65,12 @@ impl<T> SharedListener<T> {
     }
 
     /// Pushes data to the target [SharedListener].
-    pub fn push_data(&self, endpoint: Option<Endpoint>, data: T) {
+    pub fn push_data(&self, endpoint: Option<Ipv4Endpoint>, data: T) {
         self.l.borrow_mut().push_data(endpoint, data);
     }
 
     /// Pops data from the target [SharedListener].
-    pub fn pop_data(&self) -> Option<(Option<Endpoint>, T)> {
+    pub fn pop_data(&self) -> Option<(Option<Ipv4Endpoint>, T)> {
         self.l.borrow_mut().pop_data()
     }
 

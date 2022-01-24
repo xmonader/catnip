@@ -1,7 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::{fail::Fail, protocols::ipv4, queue::IoQueueDescriptor, runtime::Runtime};
+use crate::{
+    fail::Fail, protocols::ipv4::Ipv4Endpoint, queue::IoQueueDescriptor, runtime::Runtime,
+};
 use std::fmt;
 
 //==============================================================================
@@ -12,7 +14,7 @@ pub enum OperationResult<RT: Runtime> {
     Connect,
     Accept(IoQueueDescriptor),
     Push,
-    Pop(Option<ipv4::Endpoint>, RT::Buf),
+    Pop(Option<Ipv4Endpoint>, RT::Buf),
     Failed(Fail),
 }
 

@@ -32,7 +32,7 @@ pub async fn sender<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fail> {
         // If we don't have any window size at all, we need to transition to PERSIST state and
         // repeatedly send window probes until window opens up.
         if win_sz == 0 {
-            let remote_link_addr = cb.arp().query(cb.get_remote().address()).await?;
+            let remote_link_addr = cb.arp().query(cb.get_remote().get_address()).await?;
             let buf = cb
                 .pop_one_unsent_byte()
                 .unwrap_or_else(|| panic!("No unsent data? {}, {}", sent_seq, unsent_seq));
@@ -99,7 +99,7 @@ pub async fn sender<RT: Runtime>(cb: Rc<ControlBlock<RT>>) -> Result<!, Fail> {
 
         // TODO: Nagle's algorithm
         // TODO: Silly window syndrome
-        let remote_link_addr = cb.arp().query(cb.get_remote().address()).await?;
+        let remote_link_addr = cb.arp().query(cb.get_remote().get_address()).await?;
 
         // Form an outgoing packet.
         let max_size = cmp::min(

@@ -7,8 +7,8 @@ use crate::{
     protocols::{
         arp,
         ethernet2::frame::{EtherType2, Ethernet2Header},
-        ipv4,
-        ipv4::datagram::{Ipv4Header, Ipv4Protocol2},
+        ipv4::Ipv4Endpoint,
+        ipv4::{Ipv4Header, Ipv4Protocol2},
         tcp::segment::{TcpHeader, TcpOptions2, TcpSegment},
     },
     runtime::{Runtime, RuntimeBuf},
@@ -30,8 +30,8 @@ struct ConnectResult<RT: Runtime> {
 pub struct ActiveOpenSocket<RT: Runtime> {
     local_isn: SeqNumber,
 
-    local: ipv4::Endpoint,
-    remote: ipv4::Endpoint,
+    local: Ipv4Endpoint,
+    remote: Ipv4Endpoint,
 
     rt: RT,
     arp: arp::Peer<RT>,
@@ -44,8 +44,8 @@ pub struct ActiveOpenSocket<RT: Runtime> {
 impl<RT: Runtime> ActiveOpenSocket<RT> {
     pub fn new(
         local_isn: SeqNumber,
-        local: ipv4::Endpoint,
-        remote: ipv4::Endpoint,
+        local: Ipv4Endpoint,
+        remote: Ipv4Endpoint,
         rt: RT,
         arp: arp::Peer<RT>,
     ) -> Self {
@@ -119,7 +119,7 @@ impl<RT: Runtime> ActiveOpenSocket<RT> {
         debug!("Received SYN+ACK: {:?}", header);
 
         // Acknowledge the SYN+ACK segment.
-        let remote_link_addr = match self.arp.try_query(self.remote.address()) {
+        let remote_link_addr = match self.arp.try_query(self.remote.get_address()) {
             Some(r) => r,
             None => panic!("TODO: Clean up ARP query control flow"),
         };
@@ -127,7 +127,7 @@ impl<RT: Runtime> ActiveOpenSocket<RT> {
 
         let tcp_options = self.rt.tcp_options();
 
-        let mut tcp_hdr = TcpHeader::new(self.local.port, self.remote.port);
+        let mut tcp_hdr = TcpHeader::new(self.local.get_port(), self.remote.get_port());
         tcp_hdr.ack = true;
         tcp_hdr.ack_num = remote_seq_num;
         tcp_hdr.window_size = tcp_options.receive_window_size();
@@ -140,7 +140,11 @@ impl<RT: Runtime> ActiveOpenSocket<RT> {
                 src_addr: self.rt.local_link_addr(),
                 ether_type: EtherType2::Ipv4,
             },
-            ipv4_hdr: Ipv4Header::new(self.local.addr, self.remote.addr, Ipv4Protocol2::Tcp),
+            ipv4_hdr: Ipv4Header::new(
+                self.local.get_address(),
+                self.remote.get_address(),
+                Ipv4Protocol2::Tcp,
+            ),
             tcp_hdr,
             data: RT::Buf::empty(),
             tx_checksum_offload: tcp_options.tx_checksum_offload(),
@@ -213,8 +217,8 @@ impl<RT: Runtime> ActiveOpenSocket<RT> {
 
     fn background(
         local_isn: SeqNumber,
-        local: ipv4::Endpoint,
-        remote: ipv4::Endpoint,
+        local: Ipv4Endpoint,
+        remote: Ipv4Endpoint,
         rt: RT,
         arp: arp::Peer<RT>,
         result: Rc<RefCell<ConnectResult<RT>>>,
@@ -225,7 +229,7 @@ impl<RT: Runtime> ActiveOpenSocket<RT> {
 
         async move {
             for _ in 0..handshake_retries {
-                let remote_link_addr = match arp.query(remote.address()).await {
+                let remote_link_addr = match arp.query(remote.get_address()).await {
                     Ok(r) => r,
                     Err(e) => {
                         warn!("ARP query failed: {:?}", e);
@@ -233,7 +237,7 @@ impl<RT: Runtime> ActiveOpenSocket<RT> {
                     }
                 };
 
-                let mut tcp_hdr = TcpHeader::new(local.port, remote.port);
+                let mut tcp_hdr = TcpHeader::new(local.get_port(), remote.get_port());
                 tcp_hdr.syn = true;
                 tcp_hdr.seq_num = local_isn;
                 tcp_hdr.window_size = tcp_options.receive_window_size();
@@ -252,7 +256,11 @@ impl<RT: Runtime> ActiveOpenSocket<RT> {
                         src_addr: rt.local_link_addr(),
                         ether_type: EtherType2::Ipv4,
                     },
-                    ipv4_hdr: Ipv4Header::new(local.addr, remote.addr, Ipv4Protocol2::Tcp),
+                    ipv4_hdr: Ipv4Header::new(
+                        local.get_address(),
+                        remote.get_address(),
+                        Ipv4Protocol2::Tcp,
+                    ),
                     tcp_hdr,
                     data: RT::Buf::empty(),
                     tx_checksum_offload: tcp_options.tx_checksum_offload(),

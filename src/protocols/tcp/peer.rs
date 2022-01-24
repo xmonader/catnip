@@ -12,8 +12,7 @@ use crate::{
         ethernet2::frame::{EtherType2, Ethernet2Header},
         ip,
         ip::port::EphemeralPorts,
-        ipv4,
-        ipv4::datagram::{Ipv4Header, Ipv4Protocol2},
+        ipv4::{Ipv4Endpoint, Ipv4Header, Ipv4Protocol2},
         tcp::{
             operations::{AcceptFuture, ConnectFuture, ConnectFutureState, PopFuture, PushFuture},
             segment::{TcpHeader, TcpSegment},
@@ -37,18 +36,18 @@ use perftools::timer;
 
 enum Socket {
     Inactive {
-        local: Option<ipv4::Endpoint>,
+        local: Option<Ipv4Endpoint>,
     },
     Listening {
-        local: ipv4::Endpoint,
+        local: Ipv4Endpoint,
     },
     Connecting {
-        local: ipv4::Endpoint,
-        remote: ipv4::Endpoint,
+        local: Ipv4Endpoint,
+        remote: Ipv4Endpoint,
     },
     Established {
-        local: ipv4::Endpoint,
-        remote: ipv4::Endpoint,
+        local: Ipv4Endpoint,
+        remote: Ipv4Endpoint,
     },
 }
 
@@ -60,9 +59,9 @@ pub struct Inner<RT: Runtime> {
     // FD -> local port
     sockets: HashMap<IoQueueDescriptor, Socket>,
 
-    passive: HashMap<ipv4::Endpoint, PassiveSocket<RT>>,
-    connecting: HashMap<(ipv4::Endpoint, ipv4::Endpoint), ActiveOpenSocket<RT>>,
-    established: HashMap<(ipv4::Endpoint, ipv4::Endpoint), EstablishedSocket<RT>>,
+    passive: HashMap<Ipv4Endpoint, PassiveSocket<RT>>,
+    connecting: HashMap<(Ipv4Endpoint, Ipv4Endpoint), ActiveOpenSocket<RT>>,
+    established: HashMap<(Ipv4Endpoint, Ipv4Endpoint), EstablishedSocket<RT>>,
 
     rt: RT,
     arp: arp::Peer<RT>,
@@ -99,9 +98,9 @@ impl<RT: Runtime> Peer<RT> {
         inner.sockets.insert(fd, socket);
     }
 
-    pub fn bind(&self, fd: IoQueueDescriptor, addr: ipv4::Endpoint) -> Result<(), Fail> {
+    pub fn bind(&self, fd: IoQueueDescriptor, addr: Ipv4Endpoint) -> Result<(), Fail> {
         let mut inner = self.inner.borrow_mut();
-        if addr.port() >= ip::Port::first_private_port() {
+        if addr.get_port() >= ip::Port::first_private_port() {
             return Err(Fail::Malformed {
                 details: "Port number in private port range",
             });
@@ -194,7 +193,7 @@ impl<RT: Runtime> Peer<RT> {
         Poll::Ready(Ok(newfd))
     }
 
-    pub fn connect(&self, fd: IoQueueDescriptor, remote: ipv4::Endpoint) -> ConnectFuture<RT> {
+    pub fn connect(&self, fd: IoQueueDescriptor, remote: Ipv4Endpoint) -> ConnectFuture<RT> {
         let mut inner = self.inner.borrow_mut();
 
         let r = try {
@@ -207,7 +206,7 @@ impl<RT: Runtime> Peer<RT> {
 
             // TODO: We need to free these!
             let local_port = inner.ephemeral_ports.alloc()?;
-            let local = ipv4::Endpoint::new(inner.rt.local_ipv4_addr(), local_port);
+            let local = Ipv4Endpoint::new(inner.rt.local_ipv4_addr(), local_port);
 
             let socket = Socket::Connecting { local, remote };
             inner.sockets.insert(fd, socket);
@@ -372,10 +371,7 @@ impl<RT: Runtime> Peer<RT> {
         }
     }
 
-    pub fn endpoints(
-        &self,
-        fd: IoQueueDescriptor,
-    ) -> Result<(ipv4::Endpoint, ipv4::Endpoint), Fail> {
+    pub fn endpoints(&self, fd: IoQueueDescriptor) -> Result<(Ipv4Endpoint, Ipv4Endpoint), Fail> {
         let inner = self.inner.borrow();
         let key = match inner.sockets.get(&fd) {
             Some(Socket::Established { local, remote }) => (*local, *remote),
@@ -419,10 +415,12 @@ impl<RT: Runtime> Inner<RT> {
         let tcp_options = self.rt.tcp_options();
         let (tcp_hdr, data) = TcpHeader::parse(ip_hdr, buf, tcp_options.rx_checksum_offload())?;
         debug!("TCP received {:?}", tcp_hdr);
-        let local = ipv4::Endpoint::new(ip_hdr.dst_addr, tcp_hdr.dst_port);
-        let remote = ipv4::Endpoint::new(ip_hdr.src_addr, tcp_hdr.src_port);
+        let local = Ipv4Endpoint::new(ip_hdr.dst_addr(), tcp_hdr.dst_port);
+        let remote = Ipv4Endpoint::new(ip_hdr.src_addr(), tcp_hdr.src_port);
 
-        if remote.addr.is_broadcast() || remote.addr.is_multicast() || remote.addr.is_unspecified()
+        if remote.get_address().is_broadcast()
+            || remote.get_address().is_multicast()
+            || remote.get_address().is_unspecified()
         {
             return Err(Fail::Malformed {
                 details: "Invalid address type",
@@ -452,16 +450,16 @@ impl<RT: Runtime> Inner<RT> {
         Ok(())
     }
 
-    fn send_rst(&mut self, local: &ipv4::Endpoint, remote: &ipv4::Endpoint) -> Result<(), Fail> {
+    fn send_rst(&mut self, local: &Ipv4Endpoint, remote: &Ipv4Endpoint) -> Result<(), Fail> {
         // TODO: Make this work pending on ARP resolution if needed.
-        let remote_link_addr = self
-            .arp
-            .try_query(remote.addr)
-            .ok_or(Fail::ResourceNotFound {
-                details: "RST destination not in ARP cache",
-            })?;
+        let remote_link_addr =
+            self.arp
+                .try_query(remote.get_address())
+                .ok_or(Fail::ResourceNotFound {
+                    details: "RST destination not in ARP cache",
+                })?;
 
-        let mut tcp_hdr = TcpHeader::new(local.port, remote.port);
+        let mut tcp_hdr = TcpHeader::new(local.get_port(), remote.get_port());
         tcp_hdr.rst = true;
 
         let segment = TcpSegment {
@@ -470,7 +468,11 @@ impl<RT: Runtime> Inner<RT> {
                 src_addr: self.rt.local_link_addr(),
                 ether_type: EtherType2::Ipv4,
             },
-            ipv4_hdr: Ipv4Header::new(local.addr, remote.addr, Ipv4Protocol2::Tcp),
+            ipv4_hdr: Ipv4Header::new(
+                local.get_address(),
+                remote.get_address(),
+                Ipv4Protocol2::Tcp,
+            ),
             tcp_hdr,
             data: RT::Buf::empty(),
             tx_checksum_offload: self.rt.tcp_options().tx_checksum_offload(),

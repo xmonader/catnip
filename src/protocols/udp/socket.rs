@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::protocols::ipv4::Endpoint;
+use crate::protocols::ipv4::Ipv4Endpoint;
 
 //==============================================================================
 // Constants & Structures
@@ -11,7 +11,7 @@ use crate::protocols::ipv4::Endpoint;
 #[derive(Debug)]
 pub struct UdpSocket {
     /// Local endpoint.
-    local: Option<Endpoint>,
+    local: Option<Ipv4Endpoint>,
 }
 
 //==============================================================================
@@ -21,12 +21,12 @@ pub struct UdpSocket {
 /// Associate functions.
 impl UdpSocket {
     /// Gets the local endpoint of the target [UdpSocket].
-    pub fn get_local(&self) -> Option<Endpoint> {
+    pub fn get_local(&self) -> Option<Ipv4Endpoint> {
         self.local
     }
 
     /// Sets the local endpoint of the target [UdpSocket].
-    pub fn set_local(&mut self, local: Option<Endpoint>) {
+    pub fn set_local(&mut self, local: Option<Ipv4Endpoint>) {
         self.local = local;
     }
 }

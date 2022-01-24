@@ -5,7 +5,7 @@ use crate::{
     fail::Fail,
     protocols::{
         ip,
-        ipv4::datagram::{Ipv4Header, Ipv4Protocol2},
+        ipv4::{Ipv4Header, Ipv4Protocol2},
     },
     runtime::RuntimeBuf,
 };
@@ -146,12 +146,12 @@ impl UdpHeader {
         let mut state = 0xffffu32;
 
         // Source address (4 bytes)
-        let src_octets = ipv4_header.src_addr.octets();
+        let src_octets = ipv4_header.src_addr().octets();
         state += NetworkEndian::read_u16(&src_octets[0..2]) as u32;
         state += NetworkEndian::read_u16(&src_octets[2..4]) as u32;
 
         // Destination address (4 bytes)
-        let dst_octets = ipv4_header.dst_addr.octets();
+        let dst_octets = ipv4_header.dst_addr().octets();
         state += NetworkEndian::read_u16(&dst_octets[0..2]) as u32;
         state += NetworkEndian::read_u16(&dst_octets[2..4]) as u32;
 

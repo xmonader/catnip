@@ -10,7 +10,7 @@ use catnip::{
     fail::Fail,
     interop::dmtr_opcode_t,
     libos::LibOS,
-    protocols::{ip, ipv4},
+    protocols::{ip, ipv4::Ipv4Endpoint},
     queue::IoQueueDescriptor,
     runtime::Runtime,
 };
@@ -33,7 +33,7 @@ use common::*;
 /// Tests if a passive socket may be successfully opened and closed.
 fn do_tcp_connection_setup(libos: &mut LibOS<DummyRuntime>, port: u16) {
     let port = ip::Port::try_from(port).unwrap();
-    let local = ipv4::Endpoint::new(ALICE_IPV4, port);
+    let local = Ipv4Endpoint::new(ALICE_IPV4, port);
 
     // Open and close a connection.
     let sockfd = libos.socket(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap();
@@ -63,7 +63,7 @@ fn do_tcp_establish_connection(port: u16) {
         let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, alice_tx, bob_rx, arp());
 
         let port = ip::Port::try_from(port).unwrap();
-        let local = ipv4::Endpoint::new(ALICE_IPV4, port);
+        let local = Ipv4Endpoint::new(ALICE_IPV4, port);
 
         // Open connection.
         let sockfd = libos.socket(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap();
@@ -83,7 +83,7 @@ fn do_tcp_establish_connection(port: u16) {
         let mut libos = DummyLibOS::new(BOB_MAC, BOB_IPV4, bob_tx, alice_rx, arp());
 
         let port = ip::Port::try_from(port).unwrap();
-        let remote = ipv4::Endpoint::new(ALICE_IPV4, port);
+        let remote = Ipv4Endpoint::new(ALICE_IPV4, port);
 
         // Open connection.
         let sockfd = libos.socket(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap();
@@ -116,7 +116,7 @@ fn do_tcp_push_remote(port: u16) {
         let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, alice_tx, bob_rx, arp());
 
         let port = ip::Port::try_from(port).unwrap();
-        let local = ipv4::Endpoint::new(ALICE_IPV4, port);
+        let local = Ipv4Endpoint::new(ALICE_IPV4, port);
 
         // Open connection.
         let sockfd = libos.socket(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap();
@@ -146,7 +146,7 @@ fn do_tcp_push_remote(port: u16) {
         let mut libos = DummyLibOS::new(BOB_MAC, BOB_IPV4, bob_tx, alice_rx, arp());
 
         let port = ip::Port::try_from(port).unwrap();
-        let remote = ipv4::Endpoint::new(ALICE_IPV4, port);
+        let remote = Ipv4Endpoint::new(ALICE_IPV4, port);
 
         // Open connection.
         let sockfd = libos.socket(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap();
@@ -271,7 +271,7 @@ fn do_tcp_bad_bind(port: u16) {
 
     // Invalid file descriptor.
     let port = ip::Port::try_from(port).unwrap();
-    let local = ipv4::Endpoint::new(ALICE_IPV4, port);
+    let local = Ipv4Endpoint::new(ALICE_IPV4, port);
     let e = libos.bind(IoQueueDescriptor::from(0), local).unwrap_err();
     assert_eq!(e, (Fail::BadFileDescriptor {}));
 }
@@ -291,7 +291,7 @@ fn do_tcp_bad_listen(port: u16) {
     let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, tx, rx, arp());
 
     let port = ip::Port::try_from(port).unwrap();
-    let local = ipv4::Endpoint::new(ALICE_IPV4, port);
+    let local = Ipv4Endpoint::new(ALICE_IPV4, port);
 
     // Invalid file descriptor.
     let e = libos.listen(IoQueueDescriptor::from(0), 8).unwrap_err();
@@ -346,7 +346,7 @@ fn do_tcp_bad_connect(port: u16) {
     let alice = thread::spawn(move || {
         let mut libos = DummyLibOS::new(ALICE_MAC, ALICE_IPV4, alice_tx, bob_rx, arp());
         let port = ip::Port::try_from(port).unwrap();
-        let local = ipv4::Endpoint::new(ALICE_IPV4, port);
+        let local = Ipv4Endpoint::new(ALICE_IPV4, port);
 
         // Open connection.
         let sockfd = libos.socket(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap();
@@ -366,7 +366,7 @@ fn do_tcp_bad_connect(port: u16) {
         let mut libos = DummyLibOS::new(BOB_MAC, BOB_IPV4, bob_tx, alice_rx, arp());
 
         let port = ip::Port::try_from(port).unwrap();
-        let remote = ipv4::Endpoint::new(ALICE_IPV4, port);
+        let remote = Ipv4Endpoint::new(ALICE_IPV4, port);
 
         println!("BAD FD");
         // Bad file descriptor.
@@ -378,13 +378,13 @@ fn do_tcp_bad_connect(port: u16) {
         println!("BAD endpoint");
 
         // Bad endpoint.
-        let remote = ipv4::Endpoint::new(Ipv4Addr::new(0, 0, 0, 0), port);
+        let remote = Ipv4Endpoint::new(Ipv4Addr::new(0, 0, 0, 0), port);
         let sockfd = libos.socket(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap();
         let qt = libos.connect(sockfd, remote).unwrap();
         assert_eq!(libos.wait(qt).qr_opcode, dmtr_opcode_t::DMTR_OPC_FAILED);
 
         // Close connection.
-        let remote = ipv4::Endpoint::new(ALICE_IPV4, port);
+        let remote = Ipv4Endpoint::new(ALICE_IPV4, port);
         let sockfd = libos.socket(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap();
         let qt = libos.connect(sockfd, remote).unwrap();
         assert_eq!(libos.wait(qt).qr_opcode, dmtr_opcode_t::DMTR_OPC_CONNECT);

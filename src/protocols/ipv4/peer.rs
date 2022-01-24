@@ -5,7 +5,7 @@ use crate::{
     fail::Fail,
     protocols::{
         arp, icmpv4,
-        ipv4::datagram::{Ipv4Header, Ipv4Protocol2},
+        ipv4::{Ipv4Header, Ipv4Protocol2},
         tcp,
         udp::UdpPeer,
     },
@@ -39,10 +39,10 @@ impl<RT: Runtime> Ipv4Peer<RT> {
     pub fn receive(&mut self, buf: RT::Buf) -> Result<(), Fail> {
         let (header, payload) = Ipv4Header::parse(buf)?;
         debug!("Ipv4 received {:?}", header);
-        if header.dst_addr != self.rt.local_ipv4_addr() && !header.dst_addr.is_broadcast() {
+        if header.dst_addr() != self.rt.local_ipv4_addr() && !header.dst_addr().is_broadcast() {
             return Err(Fail::Misdelivered {});
         }
-        match header.protocol {
+        match header.protocol() {
             Ipv4Protocol2::Icmpv4 => self.icmpv4.receive(&header, payload),
             Ipv4Protocol2::Tcp => self.tcp.receive(&header, payload),
             Ipv4Protocol2::Udp => self.udp.do_receive(&header, payload),

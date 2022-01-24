@@ -4,7 +4,7 @@
 pub mod established;
 pub mod setup;
 
-use std::{net::Ipv4Addr};
+use std::net::Ipv4Addr;
 
 use crate::{
     collections::bytes::Bytes,
@@ -33,8 +33,8 @@ pub fn check_packet_data(
     assert_eq!(eth2_header.dst_addr, eth2_dst_addr);
     assert_eq!(eth2_header.ether_type, EtherType2::Ipv4);
     let (ipv4_header, ipv4_payload) = Ipv4Header::parse(eth2_payload).unwrap();
-    assert_eq!(ipv4_header.src_addr, ipv4_src_addr);
-    assert_eq!(ipv4_header.dst_addr, ipv4_dst_addr);
+    assert_eq!(ipv4_header.src_addr(), ipv4_src_addr);
+    assert_eq!(ipv4_header.dst_addr(), ipv4_dst_addr);
     let (tcp_header, tcp_payload) = TcpHeader::parse(&ipv4_header, ipv4_payload, false).unwrap();
     assert_ne!(tcp_payload.len(), 0);
     assert_eq!(tcp_header.window_size, window_size);
@@ -64,8 +64,8 @@ pub fn check_packet_pure_ack(
     assert_eq!(eth2_header.dst_addr, eth2_dst_addr);
     assert_eq!(eth2_header.ether_type, EtherType2::Ipv4);
     let (ipv4_header, ipv4_payload) = Ipv4Header::parse(eth2_payload).unwrap();
-    assert_eq!(ipv4_header.src_addr, ipv4_src_addr);
-    assert_eq!(ipv4_header.dst_addr, ipv4_dst_addr);
+    assert_eq!(ipv4_header.src_addr(), ipv4_src_addr);
+    assert_eq!(ipv4_header.dst_addr(), ipv4_dst_addr);
     let (tcp_header, tcp_payload) = TcpHeader::parse(&ipv4_header, ipv4_payload, false).unwrap();
     assert_eq!(tcp_payload.len(), 0);
     assert_eq!(tcp_header.window_size, window_size);

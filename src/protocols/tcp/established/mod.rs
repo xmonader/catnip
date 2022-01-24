@@ -10,11 +10,9 @@ pub use self::ctrlblk::State;
 pub use self::sender::congestion_ctrl as cc;
 
 use self::background::background;
+use crate::protocols::ipv4::Ipv4Endpoint;
 use crate::{
-    fail::Fail,
-    protocols::{ipv4, tcp::segment::TcpHeader},
-    queue::IoQueueDescriptor,
-    runtime::Runtime,
+    fail::Fail, protocols::tcp::segment::TcpHeader, queue::IoQueueDescriptor, runtime::Runtime,
     scheduler::SchedulerHandle,
 };
 use futures::channel::mpsc;
@@ -69,7 +67,7 @@ impl<RT: Runtime> EstablishedSocket<RT> {
         self.cb.rto_current()
     }
 
-    pub fn endpoints(&self) -> (ipv4::Endpoint, ipv4::Endpoint) {
+    pub fn endpoints(&self) -> (Ipv4Endpoint, Ipv4Endpoint) {
         (self.cb.get_local(), self.cb.get_remote())
     }
 }
