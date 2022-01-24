@@ -55,7 +55,7 @@ pub trait Runtime: Clone + Unpin + 'static {
     fn local_ipv4_addr(&self) -> Ipv4Addr;
     fn arp_options(&self) -> arp::Options;
     fn tcp_options(&self) -> tcp::Options<Self>;
-    fn udp_options(&self) -> udp::Options;
+    fn udp_options(&self) -> udp::UdpConfig;
 
     fn wait(&self, duration: Duration) -> Self::WaitFuture;
     fn wait_until(&self, when: Instant) -> Self::WaitFuture;

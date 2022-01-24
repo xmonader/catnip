@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 use crate::{
-    protocols::{arp, ethernet2::MacAddress, tcp, udp},
+    protocols::{arp, ethernet2::MacAddress, tcp, udp::UdpConfig},
     runtime::Runtime,
 };
 use rand::{thread_rng, Rng};
@@ -15,7 +15,7 @@ pub struct Options<RT: Runtime> {
     pub my_link_addr: MacAddress,
     pub rng_seed: [u8; 32],
     pub tcp: tcp::Options<RT>,
-    pub udp: udp::Options,
+    pub udp: UdpConfig,
 }
 
 impl<RT: Runtime> Default for Options<RT> {

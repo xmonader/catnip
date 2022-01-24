@@ -207,8 +207,8 @@ impl Runtime for DummyRuntime {
         self.inner.borrow().tcp_options.clone()
     }
 
-    fn udp_options(&self) -> udp::Options {
-        udp::Options::default()
+    fn udp_options(&self) -> udp::UdpConfig {
+        udp::UdpConfig::default()
     }
 
     fn arp_options(&self) -> arp::Options {
