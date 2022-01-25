@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::{net::Ipv4Addr, time::Duration};
 
 #[derive(Clone, Debug)]
-pub struct ArpOptions {
+pub struct ArpConfig {
     pub cache_ttl: Duration,
     pub request_timeout: Duration,
     pub retry_count: usize,
@@ -15,9 +15,9 @@ pub struct ArpOptions {
     pub disable_arp: bool,
 }
 
-impl Default for ArpOptions {
+impl Default for ArpConfig {
     fn default() -> Self {
-        ArpOptions {
+        ArpConfig {
             cache_ttl: Duration::from_secs(15),
             request_timeout: Duration::from_secs(20),
             retry_count: 5,
@@ -27,7 +27,7 @@ impl Default for ArpOptions {
     }
 }
 
-impl ArpOptions {
+impl ArpConfig {
     pub fn new(
         cache_ttl: Duration,
         request_timeout: Duration,
@@ -35,7 +35,7 @@ impl ArpOptions {
         initial_values: HashMap<Ipv4Addr, MacAddress>,
         disable_arp: bool,
     ) -> Self {
-        ArpOptions {
+        ArpConfig {
             cache_ttl,
             request_timeout,
             retry_count,

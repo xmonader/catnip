@@ -3,8 +3,8 @@
 
 use super::{
     cache::ArpCache,
+    config::ArpConfig,
     msg::ArpMessage,
-    options::ArpOptions,
     pdu::{ArpOperation, ArpPdu},
 };
 use crate::{
@@ -38,11 +38,11 @@ pub struct ArpPeer<RT: Runtime> {
     cache: Rc<RefCell<ArpCache>>,
     background: Rc<SchedulerHandle>,
     waiters: Rc<RefCell<HashMap<Ipv4Addr, Sender<MacAddress>>>>,
-    options: ArpOptions,
+    options: ArpConfig,
 }
 
 impl<RT: Runtime> ArpPeer<RT> {
-    pub fn new(now: Instant, rt: RT, options: ArpOptions) -> Result<ArpPeer<RT>, Fail> {
+    pub fn new(now: Instant, rt: RT, options: ArpConfig) -> Result<ArpPeer<RT>, Fail> {
         let cache = Rc::new(RefCell::new(ArpCache::new(
             now,
             Some(options.cache_ttl),

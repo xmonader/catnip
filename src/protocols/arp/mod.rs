@@ -2,13 +2,13 @@
 // Licensed under the MIT license.
 
 mod cache;
+mod config;
 mod msg;
-mod options;
 mod pdu;
 mod peer;
 
 #[cfg(test)]
 mod tests;
 
-pub use options::ArpOptions;
+pub use config::ArpConfig;
 pub use peer::ArpPeer;
