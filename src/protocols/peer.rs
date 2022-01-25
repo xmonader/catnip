@@ -4,7 +4,8 @@
 use crate::{
     fail::Fail,
     protocols::{
-        arp, icmpv4,
+        arp,
+        icmpv4::Icmpv4Peer,
         ipv4::{Ipv4Header, Ipv4Protocol2},
         tcp::TcpPeer,
         udp::UdpPeer,
@@ -18,7 +19,7 @@ use crate::queue::IoQueueDescriptor;
 
 pub struct Peer<RT: Runtime> {
     rt: RT,
-    icmpv4: icmpv4::Peer<RT>,
+    icmpv4: Icmpv4Peer<RT>,
     pub tcp: TcpPeer<RT>,
     pub udp: UdpPeer<RT>,
 }
@@ -26,7 +27,7 @@ pub struct Peer<RT: Runtime> {
 impl<RT: Runtime> Peer<RT> {
     pub fn new(rt: RT, arp: arp::Peer<RT>) -> Peer<RT> {
         let udp = UdpPeer::new(rt.clone(), arp.clone());
-        let icmpv4 = icmpv4::Peer::new(rt.clone(), arp.clone());
+        let icmpv4 = Icmpv4Peer::new(rt.clone(), arp.clone());
         let tcp = TcpPeer::new(rt.clone(), arp);
         Peer {
             rt,
