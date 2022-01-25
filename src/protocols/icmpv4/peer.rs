@@ -1,22 +1,19 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use super::datagram::{Icmpv4Header, Icmpv4Type2};
 use crate::{
     fail::Fail,
     futures::UtilityMethods,
     protocols::{
         arp,
         ethernet2::{EtherType2, Ethernet2Header},
-        icmpv4::datagram::Icmpv4Message,
+        icmpv4::datagram::{Icmpv4Header, Icmpv4Message, Icmpv4Type2},
         ipv4::{Ipv4Header, Ipv4Protocol2},
     },
     runtime::Runtime,
     scheduler::SchedulerHandle,
 };
-
 use byteorder::{ByteOrder, NetworkEndian};
-
 use futures::{
     channel::{
         mpsc,
@@ -24,7 +21,6 @@ use futures::{
     },
     FutureExt, StreamExt,
 };
-
 use std::{
     cell::RefCell, collections::HashMap, future::Future, net::Ipv4Addr, num::Wrapping, process,
     rc::Rc, time::Duration,
@@ -142,7 +138,7 @@ impl<RT: Runtime> Icmpv4Peer<RT> {
     pub fn receive(&mut self, ipv4_header: &Ipv4Header, buf: RT::Buf) -> Result<(), Fail> {
         let (icmpv4_hdr, _) = Icmpv4Header::parse(buf)?;
         debug!("ICMPv4 received {:?}", icmpv4_hdr);
-        match icmpv4_hdr.icmpv4_type {
+        match icmpv4_hdr.get_protocol() {
             Icmpv4Type2::EchoRequest { id, seq_num } => {
                 self.tx
                     .unbounded_send((ipv4_header.src_addr(), id, seq_num))
