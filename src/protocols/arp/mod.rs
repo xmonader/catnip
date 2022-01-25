@@ -11,4 +11,4 @@ mod peer;
 mod tests;
 
 pub use options::ArpOptions as Options;
-pub use peer::ArpPeer as Peer;
+pub use peer::ArpPeer;

@@ -5,7 +5,7 @@ use super::{constants::FALLBACK_MSS, established::ControlBlock, isn_generator::I
 use crate::{
     fail::Fail,
     protocols::{
-        arp,
+        arp::ArpPeer,
         ethernet2::{EtherType2, Ethernet2Header},
         ipv4::Ipv4Endpoint,
         ipv4::{Ipv4Header, Ipv4Protocol2},
@@ -90,11 +90,11 @@ pub struct PassiveSocket<RT: Runtime> {
 
     local: Ipv4Endpoint,
     rt: RT,
-    arp: arp::Peer<RT>,
+    arp: ArpPeer<RT>,
 }
 
 impl<RT: Runtime> PassiveSocket<RT> {
-    pub fn new(local: Ipv4Endpoint, max_backlog: usize, rt: RT, arp: arp::Peer<RT>) -> Self {
+    pub fn new(local: Ipv4Endpoint, max_backlog: usize, rt: RT, arp: ArpPeer<RT>) -> Self {
         let ready = ReadySockets {
             ready: VecDeque::new(),
             endpoints: HashSet::new(),
@@ -249,7 +249,7 @@ impl<RT: Runtime> PassiveSocket<RT> {
         local: Ipv4Endpoint,
         remote: Ipv4Endpoint,
         rt: RT,
-        arp: arp::Peer<RT>,
+        arp: ArpPeer<RT>,
         ready: Rc<RefCell<ReadySockets<RT>>>,
     ) -> impl Future<Output = ()> {
         let tcp_options = rt.tcp_options();

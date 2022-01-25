@@ -5,7 +5,7 @@ use super::{constants::FALLBACK_MSS, established::ControlBlock, SeqNumber};
 use crate::{
     fail::Fail,
     protocols::{
-        arp,
+        arp::ArpPeer,
         ethernet2::{EtherType2, Ethernet2Header},
         ipv4::Ipv4Endpoint,
         ipv4::{Ipv4Header, Ipv4Protocol2},
@@ -34,7 +34,7 @@ pub struct ActiveOpenSocket<RT: Runtime> {
     remote: Ipv4Endpoint,
 
     rt: RT,
-    arp: arp::Peer<RT>,
+    arp: ArpPeer<RT>,
 
     #[allow(unused)]
     handle: SchedulerHandle,
@@ -47,7 +47,7 @@ impl<RT: Runtime> ActiveOpenSocket<RT> {
         local: Ipv4Endpoint,
         remote: Ipv4Endpoint,
         rt: RT,
-        arp: arp::Peer<RT>,
+        arp: ArpPeer<RT>,
     ) -> Self {
         let result = ConnectResult {
             waker: None,
@@ -220,7 +220,7 @@ impl<RT: Runtime> ActiveOpenSocket<RT> {
         local: Ipv4Endpoint,
         remote: Ipv4Endpoint,
         rt: RT,
-        arp: arp::Peer<RT>,
+        arp: ArpPeer<RT>,
         result: Rc<RefCell<ConnectResult<RT>>>,
     ) -> impl Future<Output = ()> {
         let tcp_options = rt.tcp_options();

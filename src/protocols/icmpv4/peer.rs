@@ -5,7 +5,7 @@ use crate::{
     fail::Fail,
     futures::UtilityMethods,
     protocols::{
-        arp,
+        arp::ArpPeer,
         ethernet2::{EtherType2, Ethernet2Header},
         icmpv4::datagram::{Icmpv4Header, Icmpv4Message, Icmpv4Type2},
         ipv4::{Ipv4Header, Ipv4Protocol2},
@@ -70,7 +70,7 @@ pub struct Icmpv4Peer<RT: Runtime> {
     rt: RT,
 
     /// Underlying ARP Peer
-    arp: arp::Peer<RT>,
+    arp: ArpPeer<RT>,
 
     /// Transmitter
     tx: mpsc::UnboundedSender<(Ipv4Addr, u16, u16)>,
@@ -87,7 +87,7 @@ pub struct Icmpv4Peer<RT: Runtime> {
 
 impl<RT: Runtime> Icmpv4Peer<RT> {
     /// Creates a new peer for handling ICMP.
-    pub fn new(rt: RT, arp: arp::Peer<RT>) -> Icmpv4Peer<RT> {
+    pub fn new(rt: RT, arp: ArpPeer<RT>) -> Icmpv4Peer<RT> {
         let (tx, rx) = mpsc::unbounded();
         let requests = ReqQueue::new();
         let future = Self::background(rt.clone(), arp.clone(), rx);
@@ -105,7 +105,7 @@ impl<RT: Runtime> Icmpv4Peer<RT> {
     /// Background task for replying to ICMP messages.
     async fn background(
         rt: RT,
-        arp: arp::Peer<RT>,
+        arp: ArpPeer<RT>,
         mut rx: mpsc::UnboundedReceiver<(Ipv4Addr, u16, u16)>,
     ) {
         // Reply requests.

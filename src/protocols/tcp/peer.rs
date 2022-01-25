@@ -8,7 +8,7 @@ use super::{
 use crate::{
     fail::Fail,
     protocols::{
-        arp,
+        arp::ArpPeer,
         ethernet2::{EtherType2, Ethernet2Header},
         ip,
         ip::EphemeralPorts,
@@ -64,7 +64,7 @@ pub struct Inner<RT: Runtime> {
     established: HashMap<(Ipv4Endpoint, Ipv4Endpoint), EstablishedSocket<RT>>,
 
     rt: RT,
-    arp: arp::Peer<RT>,
+    arp: ArpPeer<RT>,
 
     dead_socket_tx: mpsc::UnboundedSender<IoQueueDescriptor>,
 }
@@ -74,7 +74,7 @@ pub struct TcpPeer<RT: Runtime> {
 }
 
 impl<RT: Runtime> TcpPeer<RT> {
-    pub fn new(rt: RT, arp: arp::Peer<RT>) -> Self {
+    pub fn new(rt: RT, arp: ArpPeer<RT>) -> Self {
         let (tx, rx) = mpsc::unbounded();
         let inner = Rc::new(RefCell::new(Inner::new(rt.clone(), arp, tx, rx)));
         Self { inner }
@@ -394,7 +394,7 @@ impl<RT: Runtime> TcpPeer<RT> {
 impl<RT: Runtime> Inner<RT> {
     fn new(
         rt: RT,
-        arp: arp::Peer<RT>,
+        arp: ArpPeer<RT>,
         dead_socket_tx: mpsc::UnboundedSender<IoQueueDescriptor>,
         _dead_socket_rx: mpsc::UnboundedReceiver<IoQueueDescriptor>,
     ) -> Self {
