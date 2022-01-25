@@ -6,7 +6,7 @@ use crate::{
     futures::operation::FutureOperation,
     interop::{dmtr_sgarray_t, dmtr_sgaseg_t},
     logging,
-    protocols::{arp, ethernet2::MacAddress, tcp, udp},
+    protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp, udp},
     runtime::{PacketBuf, Runtime, RECEIVE_BATCH_SIZE},
     scheduler::{Scheduler, SchedulerHandle},
     test_helpers::Engine,
@@ -56,7 +56,7 @@ pub struct TestRuntime {
     name: &'static str,
     link_addr: MacAddress,
     ipv4_addr: Ipv4Addr,
-    arp_options: arp::Options,
+    arp_options: ArpConfig,
     udp_options: udp::UdpConfig,
     tcp_options: tcp::Options<TestRuntime>,
     inner: Rc<RefCell<Inner>>,
@@ -71,7 +71,7 @@ impl TestRuntime {
     pub fn new(
         name: &'static str,
         now: Instant,
-        arp_options: arp::Options,
+        arp_options: ArpConfig,
         udp_options: udp::UdpConfig,
         tcp_options: tcp::Options<TestRuntime>,
         link_addr: MacAddress,
@@ -223,7 +223,7 @@ impl Runtime for TestRuntime {
         self.udp_options.clone()
     }
 
-    fn arp_options(&self) -> arp::Options {
+    fn arp_options(&self) -> ArpConfig {
         self.arp_options.clone()
     }
 

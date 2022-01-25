@@ -7,7 +7,7 @@ pub mod runtime;
 pub use engine::Engine;
 pub use runtime::TestRuntime;
 
-use crate::protocols::{arp, ethernet2::MacAddress, tcp, udp};
+use crate::protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp, udp};
 use std::{
     collections::HashMap,
     net::Ipv4Addr,
@@ -37,7 +37,7 @@ pub type TestEngine = Engine<TestRuntime>;
 //==============================================================================
 
 pub fn new_alice(now: Instant) -> Engine<TestRuntime> {
-    let arp_options = arp::Options::new(
+    let arp_options = ArpConfig::new(
         Duration::from_secs(600),
         Duration::from_secs(1),
         2,
@@ -59,7 +59,7 @@ pub fn new_alice(now: Instant) -> Engine<TestRuntime> {
 }
 
 pub fn new_bob(now: Instant) -> Engine<TestRuntime> {
-    let arp_options = arp::Options::new(
+    let arp_options = ArpConfig::new(
         Duration::from_secs(600),
         Duration::from_secs(1),
         2,
@@ -81,17 +81,18 @@ pub fn new_bob(now: Instant) -> Engine<TestRuntime> {
 }
 
 pub fn new_alice2(now: Instant) -> Engine<TestRuntime> {
-    let mut arp_options = arp::Options::new(
+    let mut arp: HashMap<Ipv4Addr, MacAddress> = HashMap::<Ipv4Addr, MacAddress>::new();
+    arp.insert(ALICE_IPV4, ALICE_MAC);
+    arp.insert(BOB_IPV4, BOB_MAC);
+    let arp_options = ArpConfig::new(
         Duration::from_secs(600),
         Duration::from_secs(1),
         2,
-        HashMap::new(),
+        arp,
         false,
     );
     let udp_options = udp::UdpConfig::default();
     let tcp_options = tcp::Options::<TestRuntime>::default();
-    arp_options.initial_values.insert(ALICE_IPV4, ALICE_MAC);
-    arp_options.initial_values.insert(BOB_IPV4, BOB_MAC);
     let rt = TestRuntime::new(
         "alice",
         now,
@@ -105,17 +106,18 @@ pub fn new_alice2(now: Instant) -> Engine<TestRuntime> {
 }
 
 pub fn new_bob2(now: Instant) -> Engine<TestRuntime> {
-    let mut arp_options = arp::Options::new(
+    let mut arp: HashMap<Ipv4Addr, MacAddress> = HashMap::<Ipv4Addr, MacAddress>::new();
+    arp.insert(BOB_IPV4, BOB_MAC);
+    arp.insert(ALICE_IPV4, ALICE_MAC);
+    let arp_options = ArpConfig::new(
         Duration::from_secs(600),
         Duration::from_secs(1),
         2,
-        HashMap::new(),
+        arp,
         false,
     );
     let udp_options = udp::UdpConfig::default();
     let tcp_options = tcp::Options::<TestRuntime>::default();
-    arp_options.initial_values.insert(BOB_IPV4, BOB_MAC);
-    arp_options.initial_values.insert(ALICE_IPV4, ALICE_MAC);
     let rt = TestRuntime::new(
         "bob",
         now,
@@ -129,7 +131,7 @@ pub fn new_bob2(now: Instant) -> Engine<TestRuntime> {
 }
 
 pub fn new_carrie(now: Instant) -> Engine<TestRuntime> {
-    let arp_options = arp::Options::new(
+    let arp_options = ArpConfig::new(
         Duration::from_secs(600),
         Duration::from_secs(1),
         2,

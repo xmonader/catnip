@@ -4,7 +4,7 @@
 use crate::{
     fail::Fail,
     protocols::{
-        arp,
+        arp::ArpPeer,
         ethernet2::{
             MacAddress, {EtherType2, Ethernet2Header},
         },
@@ -21,7 +21,7 @@ use crate::{
 use std::{collections::HashMap, future::Future, net::Ipv4Addr, time::Duration};
 pub struct Engine<RT: Runtime> {
     rt: RT,
-    pub arp: arp::Peer<RT>,
+    pub arp: ArpPeer<RT>,
     pub ipv4: Peer<RT>,
     pub file_table: IoQueueTable,
 }
@@ -30,7 +30,7 @@ impl<RT: Runtime> Engine<RT> {
     pub fn new(rt: RT) -> Result<Self, Fail> {
         let now = rt.now();
         let file_table = IoQueueTable::new();
-        let arp = arp::Peer::new(now, rt.clone(), rt.arp_options())?;
+        let arp = ArpPeer::new(now, rt.clone(), rt.arp_options())?;
         let ipv4 = Peer::new(rt.clone(), arp.clone());
         Ok(Engine {
             rt,

@@ -11,7 +11,7 @@ use crate::{
     collections::watched::{WatchFuture, WatchedValue},
     fail::Fail,
     protocols::{
-        arp,
+        arp::ArpPeer,
         ethernet2::{
             MacAddress, {EtherType2, Ethernet2Header},
         },
@@ -145,7 +145,7 @@ pub struct ControlBlock<RT: Runtime> {
     remote: Ipv4Endpoint,
 
     rt: Rc<RT>,
-    arp: Rc<arp::Peer<RT>>,
+    arp: Rc<ArpPeer<RT>>,
 
     /// The sender end of our connection.
     sender: Sender<RT>,
@@ -172,7 +172,7 @@ impl<RT: Runtime> ControlBlock<RT> {
         local: Ipv4Endpoint,
         remote: Ipv4Endpoint,
         rt: RT,
-        arp: arp::Peer<RT>,
+        arp: ArpPeer<RT>,
         receiver_seq_no: SeqNumber,
         ack_delay_timeout: Duration,
         receiver_window_size: u32,
@@ -229,7 +229,7 @@ impl<RT: Runtime> ControlBlock<RT> {
         self.rt.clone()
     }
 
-    pub fn arp(&self) -> Rc<arp::Peer<RT>> {
+    pub fn arp(&self) -> Rc<ArpPeer<RT>> {
         self.arp.clone()
     }
 

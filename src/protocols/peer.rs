@@ -4,7 +4,7 @@
 use crate::{
     fail::Fail,
     protocols::{
-        arp,
+        arp::ArpPeer,
         icmpv4::Icmpv4Peer,
         ipv4::{Ipv4Header, Ipv4Protocol2},
         tcp::TcpPeer,
@@ -25,7 +25,7 @@ pub struct Peer<RT: Runtime> {
 }
 
 impl<RT: Runtime> Peer<RT> {
-    pub fn new(rt: RT, arp: arp::Peer<RT>) -> Peer<RT> {
+    pub fn new(rt: RT, arp: ArpPeer<RT>) -> Peer<RT> {
         let udp = UdpPeer::new(rt.clone(), arp.clone());
         let icmpv4 = Icmpv4Peer::new(rt.clone(), arp.clone());
         let tcp = TcpPeer::new(rt.clone(), arp);

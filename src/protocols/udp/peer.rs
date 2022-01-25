@@ -10,7 +10,7 @@ use super::{
 use crate::{
     fail::Fail,
     protocols::{
-        arp,
+        arp::ArpPeer,
         ethernet2::{
             MacAddress, {EtherType2, Ethernet2Header},
         },
@@ -44,7 +44,7 @@ type OutgoingReceiver<T> = mpsc::UnboundedReceiver<OutgoingReq<T>>;
 ///
 pub struct UdpPeer<RT: Runtime> {
     rt: RT,
-    arp: arp::Peer<RT>,
+    arp: ArpPeer<RT>,
 
     sockets: HashMap<IoQueueDescriptor, UdpSocket>,
     bound: HashMap<Ipv4Endpoint, SharedListener<RT::Buf>>,
@@ -61,7 +61,7 @@ pub struct UdpPeer<RT: Runtime> {
 /// Associate functions for [UdpPeer].
 impl<RT: Runtime> UdpPeer<RT> {
     /// Creates a Udp peer.
-    pub fn new(rt: RT, arp: arp::Peer<RT>) -> Self {
+    pub fn new(rt: RT, arp: ArpPeer<RT>) -> Self {
         let (tx, rx) = mpsc::unbounded();
         let future = Self::background(rt.clone(), arp.clone(), rx);
         let handle = rt.spawn(future);
@@ -75,7 +75,7 @@ impl<RT: Runtime> UdpPeer<RT> {
         }
     }
 
-    async fn background(rt: RT, arp: arp::Peer<RT>, mut rx: OutgoingReceiver<RT::Buf>) {
+    async fn background(rt: RT, arp: ArpPeer<RT>, mut rx: OutgoingReceiver<RT::Buf>) {
         while let Some((local, remote, buf)) = rx.next().await {
             let r: Result<_, Fail> = try {
                 let link_addr = arp.query(remote.get_address()).await?;

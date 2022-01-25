@@ -13,7 +13,7 @@ use crate::{
     interop::{dmtr_qresult_t, dmtr_sgarray_t},
     operations::OperationResult,
     protocols::{
-        arp,
+        arp::ArpPeer,
         ethernet2::{EtherType2, Ethernet2Header},
         ipv4::Ipv4Endpoint,
         Peer,
@@ -36,7 +36,7 @@ const MAX_RECV_ITERS: usize = 2;
 pub type QToken = u64;
 
 pub struct LibOS<RT: Runtime> {
-    arp: arp::Peer<RT>,
+    arp: ArpPeer<RT>,
     ipv4: Peer<RT>,
     file_table: IoQueueTable,
     rt: RT,
@@ -47,7 +47,7 @@ impl<RT: Runtime> LibOS<RT> {
     pub fn new(rt: RT) -> Result<Self, Fail> {
         let now = rt.now();
         let file_table = IoQueueTable::new();
-        let arp = arp::Peer::new(now, rt.clone(), rt.arp_options())?;
+        let arp = ArpPeer::new(now, rt.clone(), rt.arp_options())?;
         let ipv4 = Peer::new(rt.clone(), arp.clone());
         Ok(Self {
             arp,

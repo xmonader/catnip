@@ -12,6 +12,10 @@ const ARP_PTYPE_IPV4: u16 = 0x800;
 const ARP_PLEN_IPV4: u8 = 4;
 const ARP_MESSAGE_SIZE: usize = 28;
 
+//==============================================================================
+// Enumerations
+//==============================================================================
+
 #[repr(u16)]
 #[derive(FromPrimitive, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ArpOperation {
@@ -19,24 +23,32 @@ pub enum ArpOperation {
     Reply = 2,
 }
 
+//==============================================================================
+// Structures
+//==============================================================================
+
 ///
 /// # Protocol Data Unit (PDU) for ARP
 ///
 #[derive(Clone, Debug)]
-pub struct ArpPdu {
+pub struct ArpHeader {
     // We only support Ethernet/Ipv4, so omit these fields.
     // hardware_type: u16,
     // protocol_type: u16,
     // hardware_address_len: u8,
     // protocol_address_len: u8,
-    pub operation: ArpOperation,
-    pub sender_hardware_addr: MacAddress,
-    pub sender_protocol_addr: Ipv4Addr,
-    pub target_hardware_addr: MacAddress,
-    pub target_protocol_addr: Ipv4Addr,
+    operation: ArpOperation,
+    sender_hardware_addr: MacAddress,
+    sender_protocol_addr: Ipv4Addr,
+    target_hardware_addr: MacAddress,
+    target_protocol_addr: Ipv4Addr,
 }
 
-impl ArpPdu {
+//==============================================================================
+// Associate Functions
+//==============================================================================
+
+impl ArpHeader {
     /// Creates an ARP protocol data unit.
     pub fn new(
         op: ArpOperation,
@@ -121,5 +133,21 @@ impl ArpPdu {
         buf[14..18].copy_from_slice(&self.sender_protocol_addr.octets());
         buf[18..24].copy_from_slice(&self.target_hardware_addr.octets());
         buf[24..28].copy_from_slice(&self.target_protocol_addr.octets());
+    }
+
+    pub fn get_operation(&self) -> ArpOperation {
+        self.operation
+    }
+
+    pub fn get_sender_hardware_addr(&self) -> MacAddress {
+        self.sender_hardware_addr
+    }
+
+    pub fn get_sender_protocol_addr(&self) -> Ipv4Addr {
+        self.sender_protocol_addr
+    }
+
+    pub fn get_destination_protocol_addr(&self) -> Ipv4Addr {
+        self.target_protocol_addr
     }
 }
