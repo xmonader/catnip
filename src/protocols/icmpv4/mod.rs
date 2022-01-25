@@ -4,4 +4,4 @@
 mod datagram;
 mod peer;
 
-pub use peer::Icmpv4Peer as Peer;
+pub use peer::Icmpv4Peer;
