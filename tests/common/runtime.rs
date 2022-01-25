@@ -9,7 +9,7 @@ use catnip::{
     interop::dmtr_sgarray_t,
     interop::dmtr_sgaseg_t,
     protocols::ethernet2::MacAddress,
-    protocols::{arp, tcp, udp},
+    protocols::{arp::ArpOptions, tcp, udp},
     runtime::Runtime,
     runtime::{PacketBuf, RECEIVE_BATCH_SIZE},
     scheduler::{Scheduler, SchedulerHandle},
@@ -58,7 +58,7 @@ struct Inner {
     link_addr: MacAddress,
     ipv4_addr: Ipv4Addr,
     tcp_options: tcp::Options<DummyRuntime>,
-    arp_options: arp::Options,
+    arp_options: ArpOptions,
 }
 
 //==============================================================================
@@ -74,7 +74,7 @@ impl DummyRuntime {
         outgoing: crossbeam_channel::Sender<Bytes>,
         arp: HashMap<Ipv4Addr, MacAddress>,
     ) -> Self {
-        let mut arp_options = arp::Options::default();
+        let mut arp_options = ArpOptions::default();
         arp_options.retry_count = 2;
         arp_options.cache_ttl = Duration::from_secs(600);
         arp_options.request_timeout = Duration::from_secs(1);
@@ -211,7 +211,7 @@ impl Runtime for DummyRuntime {
         udp::UdpConfig::default()
     }
 
-    fn arp_options(&self) -> arp::Options {
+    fn arp_options(&self) -> ArpOptions {
         self.inner.borrow().arp_options.clone()
     }
 

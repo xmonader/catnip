@@ -10,5 +10,5 @@ mod peer;
 #[cfg(test)]
 mod tests;
 
-pub use options::ArpOptions as Options;
+pub use options::ArpOptions;
 pub use peer::ArpPeer;

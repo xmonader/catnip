@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 use crate::{
-    protocols::{arp, ethernet2::MacAddress, tcp, udp::UdpConfig},
+    protocols::{arp::ArpOptions, ethernet2::MacAddress, tcp, udp::UdpConfig},
     runtime::Runtime,
 };
 use rand::{thread_rng, Rng};
@@ -10,7 +10,7 @@ use std::net::Ipv4Addr;
 
 #[derive(Clone, Debug)]
 pub struct Options<RT: Runtime> {
-    pub arp: arp::Options,
+    pub arp: ArpOptions,
     pub my_ipv4_addr: Ipv4Addr,
     pub my_link_addr: MacAddress,
     pub rng_seed: [u8; 32],
@@ -23,7 +23,7 @@ impl<RT: Runtime> Default for Options<RT> {
         let mut rng_seed = [0; 32];
         thread_rng().fill(rng_seed.as_mut());
         Options {
-            arp: arp::Options::default(),
+            arp: ArpOptions::default(),
             my_ipv4_addr: Ipv4Addr::new(0, 0, 0, 0),
             my_link_addr: MacAddress::nil(),
             rng_seed,
@@ -34,7 +34,7 @@ impl<RT: Runtime> Default for Options<RT> {
 }
 
 impl<RT: Runtime> Options<RT> {
-    pub fn arp(mut self, value: arp::Options) -> Self {
+    pub fn arp(mut self, value: ArpOptions) -> Self {
         self.arp = value;
         self
     }

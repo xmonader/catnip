@@ -7,7 +7,7 @@ pub mod runtime;
 pub use engine::Engine;
 pub use runtime::TestRuntime;
 
-use crate::protocols::{arp, ethernet2::MacAddress, tcp, udp};
+use crate::protocols::{arp::ArpOptions, ethernet2::MacAddress, tcp, udp};
 use std::{
     collections::HashMap,
     net::Ipv4Addr,
@@ -37,7 +37,7 @@ pub type TestEngine = Engine<TestRuntime>;
 //==============================================================================
 
 pub fn new_alice(now: Instant) -> Engine<TestRuntime> {
-    let arp_options = arp::Options::new(
+    let arp_options = ArpOptions::new(
         Duration::from_secs(600),
         Duration::from_secs(1),
         2,
@@ -59,7 +59,7 @@ pub fn new_alice(now: Instant) -> Engine<TestRuntime> {
 }
 
 pub fn new_bob(now: Instant) -> Engine<TestRuntime> {
-    let arp_options = arp::Options::new(
+    let arp_options = ArpOptions::new(
         Duration::from_secs(600),
         Duration::from_secs(1),
         2,
@@ -81,7 +81,7 @@ pub fn new_bob(now: Instant) -> Engine<TestRuntime> {
 }
 
 pub fn new_alice2(now: Instant) -> Engine<TestRuntime> {
-    let mut arp_options = arp::Options::new(
+    let mut arp_options = ArpOptions::new(
         Duration::from_secs(600),
         Duration::from_secs(1),
         2,
@@ -105,7 +105,7 @@ pub fn new_alice2(now: Instant) -> Engine<TestRuntime> {
 }
 
 pub fn new_bob2(now: Instant) -> Engine<TestRuntime> {
-    let mut arp_options = arp::Options::new(
+    let mut arp_options = ArpOptions::new(
         Duration::from_secs(600),
         Duration::from_secs(1),
         2,
@@ -129,7 +129,7 @@ pub fn new_bob2(now: Instant) -> Engine<TestRuntime> {
 }
 
 pub fn new_carrie(now: Instant) -> Engine<TestRuntime> {
-    let arp_options = arp::Options::new(
+    let arp_options = ArpOptions::new(
         Duration::from_secs(600),
         Duration::from_secs(1),
         2,

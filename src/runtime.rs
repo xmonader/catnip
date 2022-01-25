@@ -3,7 +3,7 @@
 use crate::{
     futures::operation::FutureOperation,
     interop::dmtr_sgarray_t,
-    protocols::{arp, ethernet2::MacAddress, tcp, udp},
+    protocols::{arp::ArpOptions, ethernet2::MacAddress, tcp, udp},
     scheduler::{Scheduler, SchedulerHandle},
 };
 use arrayvec::ArrayVec;
@@ -53,7 +53,7 @@ pub trait Runtime: Clone + Unpin + 'static {
 
     fn local_link_addr(&self) -> MacAddress;
     fn local_ipv4_addr(&self) -> Ipv4Addr;
-    fn arp_options(&self) -> arp::Options;
+    fn arp_options(&self) -> ArpOptions;
     fn tcp_options(&self) -> tcp::Options<Self>;
     fn udp_options(&self) -> udp::UdpConfig;
 
