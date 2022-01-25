@@ -5,14 +5,21 @@
 mod tests;
 
 use crate::{collections::HashTtlCache, protocols::ethernet2::MacAddress};
-
 use std::{
     collections::HashMap,
     net::Ipv4Addr,
     time::{Duration, Instant},
 };
 
+//==============================================================================
+// Constants
+//==============================================================================
+
 const DUMMY_MAC_ADDRESS: MacAddress = MacAddress::new([0; 6]);
+
+//==============================================================================
+// Structures
+//==============================================================================
 
 #[derive(Debug)]
 struct Record {
@@ -33,6 +40,10 @@ pub struct ArpCache {
     /// Disable ARP?
     disable: bool,
 }
+
+//==============================================================================
+// Associate Functions
+//==============================================================================
 
 impl ArpCache {
     /// Creates an ARP Cache.
@@ -55,15 +66,6 @@ impl ArpCache {
         }
 
         peer
-    }
-
-    // Exports address resolutions that are stored in the ARP cache.
-    pub fn export(&self) -> HashMap<Ipv4Addr, MacAddress> {
-        let mut map: HashMap<Ipv4Addr, MacAddress> = HashMap::default();
-        for (k, v) in self.cache.iter() {
-            map.insert(*k, v.link_addr);
-        }
-        map
     }
 
     /// Caches an address resolution.
@@ -93,5 +95,15 @@ impl ArpCache {
     #[allow(unused)]
     pub fn clear(&mut self) {
         self.cache.clear();
+    }
+
+    // Exports address resolutions that are stored in the ARP cache.
+    #[cfg(test)]
+    pub fn export(&self) -> HashMap<Ipv4Addr, MacAddress> {
+        let mut map: HashMap<Ipv4Addr, MacAddress> = HashMap::default();
+        for (k, v) in self.cache.iter() {
+            map.insert(*k, v.link_addr);
+        }
+        map
     }
 }

@@ -74,11 +74,13 @@ impl DummyRuntime {
         outgoing: crossbeam_channel::Sender<Bytes>,
         arp: HashMap<Ipv4Addr, MacAddress>,
     ) -> Self {
-        let mut arp_options = ArpConfig::default();
-        arp_options.retry_count = 2;
-        arp_options.cache_ttl = Duration::from_secs(600);
-        arp_options.request_timeout = Duration::from_secs(1);
-        arp_options.initial_values = arp;
+        let arp_options: ArpConfig = ArpConfig::new(
+            Duration::from_secs(600),
+            Duration::from_secs(1),
+            2,
+            arp,
+            false,
+        );
 
         let inner = Inner {
             timer: TimerRc(Rc::new(Timer::new(now))),

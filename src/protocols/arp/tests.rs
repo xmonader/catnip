@@ -1,8 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use super::pdu::{ArpOperation, ArpPdu};
-
+use super::packet::{ArpHeader, ArpOperation};
 use crate::{
     fail::Fail,
     protocols::ethernet2::Ethernet2Header,
@@ -33,7 +32,7 @@ fn immediate_reply() {
     let mut carrie = test_helpers::new_carrie(now);
 
     let options = alice.rt().arp_options();
-    assert_eq!(options.request_timeout, Duration::from_secs(1));
+    assert_eq!(options.get_request_timeout(), Duration::from_secs(1));
 
     let mut ctx = Context::from_waker(noop_waker_ref());
     let mut fut = alice.arp_query(test_helpers::CARRIE_IPV4).boxed_local();
@@ -79,8 +78,8 @@ fn slow_reply() {
 
     // this test is written based on certain assumptions.
     let options = alice.rt().arp_options();
-    assert!(options.retry_count > 0);
-    assert_eq!(options.request_timeout, Duration::from_secs(1));
+    assert!(options.get_retry_count() > 0);
+    assert_eq!(options.get_request_timeout(), Duration::from_secs(1));
 
     let mut ctx = Context::from_waker(noop_waker_ref());
     let mut fut = alice.arp_query(test_helpers::CARRIE_IPV4).boxed_local();
@@ -124,8 +123,8 @@ fn no_reply() {
     let mut alice = test_helpers::new_alice(now);
     let options = alice.rt().arp_options();
 
-    assert_eq!(options.retry_count, 2);
-    assert_eq!(options.request_timeout, Duration::from_secs(1));
+    assert_eq!(options.get_retry_count(), 2);
+    assert_eq!(options.get_request_timeout(), Duration::from_secs(1));
 
     let mut ctx = Context::from_waker(noop_waker_ref());
     let mut fut = alice.arp_query(test_helpers::CARRIE_IPV4).boxed_local();
@@ -133,22 +132,22 @@ fn no_reply() {
     let bytes = alice.rt().pop_frame();
 
     let (_, payload) = Ethernet2Header::parse(bytes).unwrap();
-    let arp = ArpPdu::parse(payload).unwrap();
-    assert_eq!(arp.operation, ArpOperation::Request);
+    let arp = ArpHeader::parse(payload).unwrap();
+    assert_eq!(arp.get_operation(), ArpOperation::Request);
 
-    for i in 0..options.retry_count {
-        now += options.request_timeout;
+    for i in 0..options.get_retry_count() {
+        now += options.get_request_timeout();
         alice.rt().advance_clock(now);
         assert!(Future::poll(fut.as_mut(), &mut ctx).is_pending());
         info!("no_reply(): retry #{}", i + 1);
         let bytes = alice.rt().pop_frame();
         let (_, payload) = Ethernet2Header::parse(bytes).unwrap();
-        let arp = ArpPdu::parse(payload).unwrap();
-        assert_eq!(arp.operation, ArpOperation::Request);
+        let arp = ArpHeader::parse(payload).unwrap();
+        assert_eq!(arp.get_operation(), ArpOperation::Request);
     }
 
     // timeout
-    now += options.request_timeout;
+    now += options.get_request_timeout();
     alice.rt().advance_clock(now);
 
     must_let!(let Poll::Ready(Err(Fail::Timeout {})) = Future::poll(fut.as_mut(), &mut ctx));

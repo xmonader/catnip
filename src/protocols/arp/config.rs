@@ -5,15 +5,23 @@ use crate::protocols::ethernet2::MacAddress;
 use std::collections::HashMap;
 use std::{net::Ipv4Addr, time::Duration};
 
+//==============================================================================
+// Structures
+//==============================================================================
+
 #[derive(Clone, Debug)]
 pub struct ArpConfig {
-    pub cache_ttl: Duration,
-    pub request_timeout: Duration,
-    pub retry_count: usize,
+    cache_ttl: Duration,
+    request_timeout: Duration,
+    retry_count: usize,
 
-    pub initial_values: HashMap<Ipv4Addr, MacAddress>,
-    pub disable_arp: bool,
+    initial_values: HashMap<Ipv4Addr, MacAddress>,
+    disable_arp: bool,
 }
+
+//==============================================================================
+// Trait Implementations
+//==============================================================================
 
 impl Default for ArpConfig {
     fn default() -> Self {
@@ -26,6 +34,10 @@ impl Default for ArpConfig {
         }
     }
 }
+
+//==============================================================================
+// Associate Functions
+//==============================================================================
 
 impl ArpConfig {
     pub fn new(
@@ -44,21 +56,41 @@ impl ArpConfig {
         }
     }
 
-    pub fn cache_ttl(mut self, value: Duration) -> Self {
+    // TODO: drop this function, we should not support dynamic change in config.
+    pub fn set_cache_ttl(&mut self, value: Duration) {
         assert!(value > Duration::new(0, 0));
         self.cache_ttl = value;
-        self
     }
 
-    pub fn request_timeout(mut self, value: Duration) -> Self {
+    pub fn get_cache_ttl(&self) -> Duration {
+        self.cache_ttl
+    }
+
+    // TODO: drop this function, we should not support dynamic change in config.
+    pub fn set_request_timeout(&mut self, value: Duration) {
         assert!(value > Duration::new(0, 0));
         self.request_timeout = value;
-        self
     }
 
-    pub fn retry_count(mut self, value: usize) -> Self {
+    pub fn get_request_timeout(&self) -> Duration {
+        self.request_timeout
+    }
+
+    // TODO: drop this function, we should not support dynamic change in config.
+    pub fn set_retry_count(&mut self, value: usize) {
         assert!(value > 0);
         self.retry_count = value;
-        self
+    }
+
+    pub fn get_retry_count(&self) -> usize {
+        self.retry_count
+    }
+
+    pub fn get_disable_arp(&self) -> bool {
+        self.disable_arp
+    }
+
+    pub fn get_initial_values(&self) -> &HashMap<Ipv4Addr, MacAddress> {
+        &self.initial_values
     }
 }

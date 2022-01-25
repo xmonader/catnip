@@ -3,8 +3,7 @@
 
 mod cache;
 mod config;
-mod msg;
-mod pdu;
+mod packet;
 mod peer;
 
 #[cfg(test)]
