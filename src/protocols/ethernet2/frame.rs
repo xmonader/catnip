@@ -1,42 +1,23 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::{fail::Fail, protocols::ethernet2::MacAddress, runtime::RuntimeBuf};
+use crate::{
+    fail::Fail, protocols::ethernet2::EtherType2, protocols::ethernet2::MacAddress,
+    runtime::RuntimeBuf,
+};
 use byteorder::{ByteOrder, NetworkEndian};
-use num_traits::FromPrimitive;
 use std::convert::{TryFrom, TryInto};
 
-pub const MIN_PAYLOAD_SIZE: usize = 46;
-pub const ETHERNET2_HEADER_SIZE: usize = 14;
-
-#[repr(u16)]
-#[derive(FromPrimitive, Copy, Clone, PartialEq, Eq, Debug)]
-pub enum EtherType2 {
-    Arp = 0x806,
-    Ipv4 = 0x800,
-}
-
-impl TryFrom<u16> for EtherType2 {
-    type Error = Fail;
-
-    fn try_from(n: u16) -> Result<Self, Fail> {
-        match FromPrimitive::from_u16(n) {
-            Some(n) => Ok(n),
-            None => Err(Fail::Unsupported {
-                details: "Unsupported ETHERTYPE",
-            }),
-        }
-    }
-}
+const ETHERNET2_HEADER_SIZE: usize = 14;
 
 #[derive(Clone, Debug)]
 pub struct Ethernet2Header {
     // Bytes 0..6
-    pub dst_addr: MacAddress,
+    dst_addr: MacAddress,
     // Bytes 6..12
-    pub src_addr: MacAddress,
+    src_addr: MacAddress,
     // Bytes 12..14
-    pub ether_type: EtherType2,
+    ether_type: EtherType2,
 }
 
 impl Ethernet2Header {
@@ -78,5 +59,17 @@ impl Ethernet2Header {
         buf[0..6].copy_from_slice(&self.dst_addr.octets());
         buf[6..12].copy_from_slice(&self.src_addr.octets());
         NetworkEndian::write_u16(&mut buf[12..14], self.ether_type as u16);
+    }
+
+    pub fn dst_addr(&self) -> MacAddress {
+        self.dst_addr
+    }
+
+    pub fn src_addr(&self) -> MacAddress {
+        self.src_addr
+    }
+
+    pub fn ether_type(&self) -> EtherType2 {
+        self.ether_type
     }
 }

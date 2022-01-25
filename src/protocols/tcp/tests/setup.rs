@@ -371,9 +371,9 @@ fn check_packet_pure_syn(
     dst_port: Port,
 ) {
     let (eth2_header, eth2_payload) = Ethernet2Header::parse(bytes).unwrap();
-    assert_eq!(eth2_header.src_addr, eth2_src_addr);
-    assert_eq!(eth2_header.dst_addr, eth2_dst_addr);
-    assert_eq!(eth2_header.ether_type, EtherType2::Ipv4);
+    assert_eq!(eth2_header.src_addr(), eth2_src_addr);
+    assert_eq!(eth2_header.dst_addr(), eth2_dst_addr);
+    assert_eq!(eth2_header.ether_type(), EtherType2::Ipv4);
     let (ipv4_header, ipv4_payload) = Ipv4Header::parse(eth2_payload).unwrap();
     assert_eq!(ipv4_header.src_addr(), ipv4_src_addr);
     assert_eq!(ipv4_header.dst_addr(), ipv4_dst_addr);
@@ -394,9 +394,9 @@ fn check_packet_syn_ack(
     src_port: Port,
 ) {
     let (eth2_header, eth2_payload) = Ethernet2Header::parse(bytes).unwrap();
-    assert_eq!(eth2_header.src_addr, eth2_src_addr);
-    assert_eq!(eth2_header.dst_addr, eth2_dst_addr);
-    assert_eq!(eth2_header.ether_type, EtherType2::Ipv4);
+    assert_eq!(eth2_header.src_addr(), eth2_src_addr);
+    assert_eq!(eth2_header.dst_addr(), eth2_dst_addr);
+    assert_eq!(eth2_header.ether_type(), EtherType2::Ipv4);
     let (ipv4_header, ipv4_payload) = Ipv4Header::parse(eth2_payload).unwrap();
     assert_eq!(ipv4_header.src_addr(), ipv4_src_addr);
     assert_eq!(ipv4_header.dst_addr(), ipv4_dst_addr);
@@ -420,9 +420,9 @@ fn check_packet_pure_ack_on_syn_ack(
     dst_port: Port,
 ) {
     let (eth2_header, eth2_payload) = Ethernet2Header::parse(bytes).unwrap();
-    assert_eq!(eth2_header.src_addr, eth2_src_addr);
-    assert_eq!(eth2_header.dst_addr, eth2_dst_addr);
-    assert_eq!(eth2_header.ether_type, EtherType2::Ipv4);
+    assert_eq!(eth2_header.src_addr(), eth2_src_addr);
+    assert_eq!(eth2_header.dst_addr(), eth2_dst_addr);
+    assert_eq!(eth2_header.ether_type(), EtherType2::Ipv4);
     let (ipv4_header, ipv4_payload) = Ipv4Header::parse(eth2_payload).unwrap();
     assert_eq!(ipv4_header.src_addr(), ipv4_src_addr);
     assert_eq!(ipv4_header.dst_addr(), ipv4_dst_addr);

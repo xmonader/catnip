@@ -9,7 +9,7 @@ use crate::{
     fail::Fail,
     protocols::{
         arp,
-        ethernet2::frame::{EtherType2, Ethernet2Header},
+        ethernet2::{EtherType2, Ethernet2Header},
         ip,
         ip::port::EphemeralPorts,
         ipv4::{Ipv4Endpoint, Ipv4Header, Ipv4Protocol2},
@@ -463,11 +463,11 @@ impl<RT: Runtime> Inner<RT> {
         tcp_hdr.rst = true;
 
         let segment = TcpSegment {
-            ethernet2_hdr: Ethernet2Header {
-                dst_addr: remote_link_addr,
-                src_addr: self.rt.local_link_addr(),
-                ether_type: EtherType2::Ipv4,
-            },
+            ethernet2_hdr: Ethernet2Header::new(
+                remote_link_addr,
+                self.rt.local_link_addr(),
+                EtherType2::Ipv4,
+            ),
             ipv4_hdr: Ipv4Header::new(
                 local.get_address(),
                 remote.get_address(),

@@ -6,7 +6,7 @@ use crate::{
     fail::Fail,
     protocols::{
         arp,
-        ethernet2::frame::{EtherType2, Ethernet2Header},
+        ethernet2::{EtherType2, Ethernet2Header},
         ipv4::Ipv4Endpoint,
         ipv4::{Ipv4Header, Ipv4Protocol2},
         tcp::{
@@ -281,11 +281,11 @@ impl<RT: Runtime> PassiveSocket<RT> {
 
                 debug!("Sending SYN+ACK: {:?}", tcp_hdr);
                 let segment = TcpSegment {
-                    ethernet2_hdr: Ethernet2Header {
-                        dst_addr: remote_link_addr,
-                        src_addr: rt.local_link_addr(),
-                        ether_type: EtherType2::Ipv4,
-                    },
+                    ethernet2_hdr: Ethernet2Header::new(
+                        remote_link_addr,
+                        rt.local_link_addr(),
+                        EtherType2::Ipv4,
+                    ),
                     ipv4_hdr: Ipv4Header::new(
                         local.get_address(),
                         remote.get_address(),

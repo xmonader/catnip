@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::{protocols::ethernet2::frame::Ethernet2Header, runtime::PacketBuf};
+use crate::{protocols::ethernet2::Ethernet2Header, runtime::PacketBuf};
 use std::marker::PhantomData;
 
 use super::pdu::ArpPdu;
