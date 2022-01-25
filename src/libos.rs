@@ -15,7 +15,8 @@ use crate::{
     protocols::{
         arp,
         ethernet2::{EtherType2, Ethernet2Header},
-        ipv4::{Ipv4Endpoint, Ipv4Peer},
+        ipv4::Ipv4Endpoint,
+        Peer,
     },
     queue::{IoQueueDescriptor, IoQueueTable, IoQueueType},
     runtime::Runtime,
@@ -36,7 +37,7 @@ pub type QToken = u64;
 
 pub struct LibOS<RT: Runtime> {
     arp: arp::Peer<RT>,
-    ipv4: Ipv4Peer<RT>,
+    ipv4: Peer<RT>,
     file_table: IoQueueTable,
     rt: RT,
     ts_iters: usize,
@@ -47,7 +48,7 @@ impl<RT: Runtime> LibOS<RT> {
         let now = rt.now();
         let file_table = IoQueueTable::new();
         let arp = arp::Peer::new(now, rt.clone(), rt.arp_options())?;
-        let ipv4 = Ipv4Peer::new(rt.clone(), arp.clone());
+        let ipv4 = Peer::new(rt.clone(), arp.clone());
         Ok(Self {
             arp,
             ipv4,

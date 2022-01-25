@@ -15,4 +15,6 @@ mod sequence_number;
 #[cfg(test)]
 mod tests;
 
-pub use self::{established::cc, options::TcpOptions as Options, peer::Peer, sequence_number::SeqNumber};
+pub use self::{
+    established::cc, options::TcpOptions as Options, peer::TcpPeer, sequence_number::SeqNumber,
+};

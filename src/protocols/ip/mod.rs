@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-pub mod port;
+mod ephemeral;
+mod port;
 
-pub use port::Port;
+pub use self::ephemeral::EphemeralPorts;
+pub use self::port::Port;

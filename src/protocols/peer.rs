@@ -6,7 +6,7 @@ use crate::{
     protocols::{
         arp, icmpv4,
         ipv4::{Ipv4Header, Ipv4Protocol2},
-        tcp,
+        tcp::TcpPeer,
         udp::UdpPeer,
     },
     runtime::Runtime,
@@ -16,19 +16,19 @@ use std::{future::Future, net::Ipv4Addr, time::Duration};
 #[cfg(test)]
 use crate::queue::IoQueueDescriptor;
 
-pub struct Ipv4Peer<RT: Runtime> {
+pub struct Peer<RT: Runtime> {
     rt: RT,
     icmpv4: icmpv4::Peer<RT>,
-    pub tcp: tcp::Peer<RT>,
+    pub tcp: TcpPeer<RT>,
     pub udp: UdpPeer<RT>,
 }
 
-impl<RT: Runtime> Ipv4Peer<RT> {
-    pub fn new(rt: RT, arp: arp::Peer<RT>) -> Ipv4Peer<RT> {
+impl<RT: Runtime> Peer<RT> {
+    pub fn new(rt: RT, arp: arp::Peer<RT>) -> Peer<RT> {
         let udp = UdpPeer::new(rt.clone(), arp.clone());
         let icmpv4 = icmpv4::Peer::new(rt.clone(), arp.clone());
-        let tcp = tcp::Peer::new(rt.clone(), arp);
-        Ipv4Peer {
+        let tcp = TcpPeer::new(rt.clone(), arp);
+        Peer {
             rt,
             icmpv4,
             tcp,
@@ -59,7 +59,7 @@ impl<RT: Runtime> Ipv4Peer<RT> {
 }
 
 #[cfg(test)]
-impl<RT: Runtime> Ipv4Peer<RT> {
+impl<RT: Runtime> Peer<RT> {
     pub fn tcp_mss(&self, fd: IoQueueDescriptor) -> Result<usize, Fail> {
         self.tcp.remote_mss(fd)
     }

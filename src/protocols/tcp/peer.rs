@@ -11,7 +11,7 @@ use crate::{
         arp,
         ethernet2::{EtherType2, Ethernet2Header},
         ip,
-        ip::port::EphemeralPorts,
+        ip::EphemeralPorts,
         ipv4::{Ipv4Endpoint, Ipv4Header, Ipv4Protocol2},
         tcp::{
             operations::{AcceptFuture, ConnectFuture, ConnectFutureState, PopFuture, PushFuture},
@@ -69,11 +69,11 @@ pub struct Inner<RT: Runtime> {
     dead_socket_tx: mpsc::UnboundedSender<IoQueueDescriptor>,
 }
 
-pub struct Peer<RT: Runtime> {
+pub struct TcpPeer<RT: Runtime> {
     pub(super) inner: Rc<RefCell<Inner<RT>>>,
 }
 
-impl<RT: Runtime> Peer<RT> {
+impl<RT: Runtime> TcpPeer<RT> {
     pub fn new(rt: RT, arp: arp::Peer<RT>) -> Self {
         let (tx, rx) = mpsc::unbounded();
         let inner = Rc::new(RefCell::new(Inner::new(rt.clone(), arp, tx, rx)));

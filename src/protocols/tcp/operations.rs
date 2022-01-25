@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use super::peer::{Inner, Peer};
+use super::peer::{Inner, TcpPeer};
 use crate::{
     fail::Fail, futures::result::FutureResult, operations::OperationResult,
     queue::IoQueueDescriptor, runtime::Runtime,
@@ -154,7 +154,7 @@ impl<RT: Runtime> Future for AcceptFuture<RT> {
 
     fn poll(self: Pin<&mut Self>, context: &mut Context) -> Poll<Self::Output> {
         let self_ = self.get_mut();
-        let peer = Peer {
+        let peer = TcpPeer {
             inner: self_.inner.clone(),
         };
         peer.poll_accept(self_.fd, self_.newfd, context)
@@ -200,7 +200,7 @@ impl<RT: Runtime> Future for PopFuture<RT> {
 
     fn poll(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Self::Output> {
         let self_ = self.get_mut();
-        let peer = Peer {
+        let peer = TcpPeer {
             inner: self_.inner.clone(),
         };
         peer.poll_recv(self_.fd, ctx)
