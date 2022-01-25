@@ -8,9 +8,10 @@ use crate::{
         ethernet2::{
             MacAddress, {EtherType2, Ethernet2Header},
         },
-        ipv4::{Ipv4Endpoint, Ipv4Peer},
+        ipv4::Ipv4Endpoint,
         tcp::operations::{AcceptFuture, ConnectFuture, PopFuture, PushFuture},
         udp::UdpPopFuture,
+        Ipv4Peer,
     },
     queue::IoQueueType,
     queue::{IoQueueDescriptor, IoQueueTable},

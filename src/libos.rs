@@ -15,7 +15,8 @@ use crate::{
     protocols::{
         arp,
         ethernet2::{EtherType2, Ethernet2Header},
-        ipv4::{Ipv4Endpoint, Ipv4Peer},
+        ipv4::Ipv4Endpoint,
+        Ipv4Peer,
     },
     queue::{IoQueueDescriptor, IoQueueTable, IoQueueType},
     runtime::Runtime,

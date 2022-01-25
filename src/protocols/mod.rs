@@ -6,8 +6,11 @@ pub mod ethernet2;
 pub mod icmpv4;
 pub mod ip;
 pub mod ipv4;
+mod peer;
 pub mod tcp;
 pub mod udp;
+
+pub use peer::Ipv4Peer;
 
 pub enum Protocol {
     Tcp,
