@@ -10,7 +10,7 @@ mod peer;
 pub mod tcp;
 pub mod udp;
 
-pub use peer::Ipv4Peer;
+pub use peer::Peer;
 
 pub enum Protocol {
     Tcp,

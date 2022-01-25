@@ -11,7 +11,7 @@ use crate::{
         ipv4::Ipv4Endpoint,
         tcp::operations::{AcceptFuture, ConnectFuture, PopFuture, PushFuture},
         udp::UdpPopFuture,
-        Ipv4Peer,
+        Peer,
     },
     queue::IoQueueType,
     queue::{IoQueueDescriptor, IoQueueTable},
@@ -22,7 +22,7 @@ use std::{collections::HashMap, future::Future, net::Ipv4Addr, time::Duration};
 pub struct Engine<RT: Runtime> {
     rt: RT,
     pub arp: arp::Peer<RT>,
-    pub ipv4: Ipv4Peer<RT>,
+    pub ipv4: Peer<RT>,
     pub file_table: IoQueueTable,
 }
 
@@ -31,7 +31,7 @@ impl<RT: Runtime> Engine<RT> {
         let now = rt.now();
         let file_table = IoQueueTable::new();
         let arp = arp::Peer::new(now, rt.clone(), rt.arp_options())?;
-        let ipv4 = Ipv4Peer::new(rt.clone(), arp.clone());
+        let ipv4 = Peer::new(rt.clone(), arp.clone());
         Ok(Engine {
             rt,
             arp,
