@@ -60,12 +60,6 @@ impl ArpConfig {
         self.cache_ttl
     }
 
-    // TODO: drop this function, we should not support dynamic change in config.
-    pub fn set_request_timeout(&mut self, value: Duration) {
-        assert!(value > Duration::new(0, 0));
-        self.request_timeout = value;
-    }
-
     pub fn get_request_timeout(&self) -> Duration {
         self.request_timeout
     }
