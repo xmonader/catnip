@@ -56,30 +56,12 @@ impl ArpConfig {
         }
     }
 
-    // TODO: drop this function, we should not support dynamic change in config.
-    pub fn set_cache_ttl(&mut self, value: Duration) {
-        assert!(value > Duration::new(0, 0));
-        self.cache_ttl = value;
-    }
-
     pub fn get_cache_ttl(&self) -> Duration {
         self.cache_ttl
     }
 
-    // TODO: drop this function, we should not support dynamic change in config.
-    pub fn set_request_timeout(&mut self, value: Duration) {
-        assert!(value > Duration::new(0, 0));
-        self.request_timeout = value;
-    }
-
     pub fn get_request_timeout(&self) -> Duration {
         self.request_timeout
-    }
-
-    // TODO: drop this function, we should not support dynamic change in config.
-    pub fn set_retry_count(&mut self, value: usize) {
-        assert!(value > 0);
-        self.retry_count = value;
     }
 
     pub fn get_retry_count(&self) -> usize {
