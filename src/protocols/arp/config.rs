@@ -56,12 +56,6 @@ impl ArpConfig {
         }
     }
 
-    // TODO: drop this function, we should not support dynamic change in config.
-    pub fn set_cache_ttl(&mut self, value: Duration) {
-        assert!(value > Duration::new(0, 0));
-        self.cache_ttl = value;
-    }
-
     pub fn get_cache_ttl(&self) -> Duration {
         self.cache_ttl
     }
