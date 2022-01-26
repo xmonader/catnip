@@ -120,8 +120,7 @@ impl<RT: Runtime> PassiveSocket<RT> {
     pub fn receive(&mut self, ip_header: &Ipv4Header, header: &TcpHeader) -> Result<(), Fail> {
         let remote = Ipv4Endpoint::new(ip_header.src_addr(), header.src_port);
         if self.ready.borrow().endpoints.contains(&remote) {
-            // TODO: What should we do if a packet shows up for a connection that hasn't been
-            // `accept`ed yet?
+            // TODO: What should we do if a packet shows up for a connection that hasn't been `accept`ed yet?
             return Ok(());
         }
         let inflight_len = self.inflight.len();
@@ -134,7 +133,6 @@ impl<RT: Runtime> PassiveSocket<RT> {
                 });
             }
             debug!("Received ACK: {:?}", header);
-            // TODO: Add entry API.
             let &InflightAccept {
                 local_isn,
                 remote_isn,
