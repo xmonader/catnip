@@ -64,12 +64,6 @@ impl ArpConfig {
         self.request_timeout
     }
 
-    // TODO: drop this function, we should not support dynamic change in config.
-    pub fn set_retry_count(&mut self, value: usize) {
-        assert!(value > 0);
-        self.retry_count = value;
-    }
-
     pub fn get_retry_count(&self) -> usize {
         self.retry_count
     }
