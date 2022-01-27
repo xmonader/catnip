@@ -23,7 +23,6 @@ use crate::{
 };
 use catwalk::SchedulerHandle;
 use libc::c_int;
-use must_let::must_let;
 use std::time::Instant;
 
 #[cfg(feature = "profiler")]
@@ -435,7 +434,13 @@ impl<RT: Runtime> LibOS<RT> {
             // TODO I don't understand what guarantees that this task will be done by the time we
             // get here and make this assert true.
             assert!(handle.has_completed());
-            must_let!(let (_, OperationResult::Push) = self.take_operation(handle));
+            assert_eq!(
+                match self.take_operation(handle) {
+                    (_, OperationResult::Push) => Ok(()),
+                    _ => Err(()),
+                },
+                Ok(())
+            )
         }
     }
 

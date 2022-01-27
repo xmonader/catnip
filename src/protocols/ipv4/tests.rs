@@ -3,7 +3,6 @@
 
 use crate::{runtime::Runtime, test_helpers};
 use futures::task::{noop_waker_ref, Context};
-use must_let::must_let;
 use std::{future::Future, pin::Pin, task::Poll, time::Duration, time::Instant};
 
 //==============================================================================
@@ -21,7 +20,11 @@ fn ipv4_ping() {
 
     // Alice pings Bob.
     let mut ping_fut = Box::pin(alice.ipv4_ping(test_helpers::BOB_IPV4, None));
-    must_let!(let _ = Future::poll(Pin::new(&mut ping_fut), &mut ctx));
+    match Future::poll(Pin::new(&mut ping_fut), &mut ctx) {
+        Poll::Pending => Ok(()),
+        _ => Err(()),
+    }
+    .unwrap();
 
     now += Duration::from_secs(1);
     alice.rt().advance_clock(now);
@@ -40,7 +43,11 @@ fn ipv4_ping() {
     // Alice receives reply from Bob
     alice.receive(bob.rt().pop_frame()).unwrap();
     alice.rt().poll_scheduler();
-    must_let!(let Poll::Ready(Ok(latency)) = Future::poll(Pin::new(&mut ping_fut), &mut ctx));
+    let latency: Duration = match Future::poll(Pin::new(&mut ping_fut), &mut ctx) {
+        Poll::Ready(Ok(latency)) => Ok(latency),
+        _ => Err(()),
+    }
+    .unwrap();
     assert_eq!(latency, Duration::from_secs(2));
 }
 
@@ -56,7 +63,11 @@ fn ipv4_ping_loop() {
     for _ in 1..1000 {
         // Alice pings Bob.
         let mut ping_fut = Box::pin(alice.ipv4_ping(test_helpers::BOB_IPV4, None));
-        must_let!(let _ = Future::poll(Pin::new(&mut ping_fut), &mut ctx));
+        match Future::poll(Pin::new(&mut ping_fut), &mut ctx) {
+            Poll::Pending => Ok(()),
+            _ => Err(()),
+        }
+        .unwrap();
 
         now += Duration::from_secs(1);
         alice.rt().advance_clock(now);
@@ -75,7 +86,11 @@ fn ipv4_ping_loop() {
         // Alice receives reply from Bob
         alice.receive(bob.rt().pop_frame()).unwrap();
         alice.rt().poll_scheduler();
-        must_let!(let Poll::Ready(Ok(latency)) = Future::poll(Pin::new(&mut ping_fut), &mut ctx));
+        let latency: Duration = match Future::poll(Pin::new(&mut ping_fut), &mut ctx) {
+            Poll::Ready(Ok(latency)) => Ok(latency),
+            _ => Err(()),
+        }
+        .unwrap();
         assert_eq!(latency, Duration::from_secs(2));
     }
 }

@@ -9,7 +9,6 @@ use crate::{
     test_helpers,
 };
 use futures::task::{noop_waker_ref, Context};
-use must_let::must_let;
 use std::{
     convert::TryFrom,
     future::Future,
@@ -80,7 +79,11 @@ fn udp_push_pop() {
     // Receive data from Alice.
     bob.receive(alice.rt().pop_frame()).unwrap();
     let mut pop_future = bob.udp_pop(bob_fd);
-    must_let!(let Poll::Ready(Ok((Some(remote_addr), received_buf))) = Future::poll(Pin::new(&mut pop_future), &mut ctx));
+    let (remote_addr, received_buf) = match Future::poll(Pin::new(&mut pop_future), &mut ctx) {
+        Poll::Ready(Ok((Some(remote_addr), received_buf))) => Ok((remote_addr, received_buf)),
+        _ => Err(()),
+    }
+    .unwrap();
     assert_eq!(remote_addr, alice_addr);
     assert_eq!(received_buf, buf);
 
@@ -122,7 +125,11 @@ fn udp_ping_pong() {
     // Receive data from Alice.
     bob.receive(alice.rt().pop_frame()).unwrap();
     let mut pop_future = bob.udp_pop(bob_fd);
-    must_let!(let Poll::Ready(Ok((Some(remote_addr), received_buf_a))) = Future::poll(Pin::new(&mut pop_future), &mut ctx));
+    let (remote_addr, received_buf_a) = match Future::poll(Pin::new(&mut pop_future), &mut ctx) {
+        Poll::Ready(Ok((Some(remote_addr), received_buf_a))) => Ok((remote_addr, received_buf_a)),
+        _ => Err(()),
+    }
+    .unwrap();
     assert_eq!(remote_addr, alice_addr);
     assert_eq!(received_buf_a, buf_a);
 
@@ -138,7 +145,11 @@ fn udp_ping_pong() {
     // Receive data from Bob.
     alice.receive(bob.rt().pop_frame()).unwrap();
     let mut pop_future = alice.udp_pop(alice_fd);
-    must_let!(let Poll::Ready(Ok((Some(remote_addr), received_buf_b))) = Future::poll(Pin::new(&mut pop_future), &mut ctx));
+    let (remote_addr, received_buf_b) = match Future::poll(Pin::new(&mut pop_future), &mut ctx) {
+        Poll::Ready(Ok((Some(remote_addr), received_buf_b))) => Ok((remote_addr, received_buf_b)),
+        _ => Err(()),
+    }
+    .unwrap();
     assert_eq!(remote_addr, bob_addr);
     assert_eq!(received_buf_b, buf_b);
 
@@ -233,7 +244,11 @@ fn udp_loop2_push_pop() {
         // Receive data from Alice.
         bob.receive(alice.rt().pop_frame()).unwrap();
         let mut pop_future = bob.udp_pop(bob_fd);
-        must_let!(let Poll::Ready(Ok((Some(remote_addr), received_buf))) = Future::poll(Pin::new(&mut pop_future), &mut ctx));
+        let (remote_addr, received_buf) = match Future::poll(Pin::new(&mut pop_future), &mut ctx) {
+            Poll::Ready(Ok((Some(remote_addr), received_buf))) => Ok((remote_addr, received_buf)),
+            _ => Err(()),
+        }
+        .unwrap();
         assert_eq!(remote_addr, alice_addr);
         assert_eq!(received_buf, buf);
     }
@@ -286,7 +301,14 @@ fn udp_loop2_ping_pong() {
         // Receive data from Alice.
         bob.receive(alice.rt().pop_frame()).unwrap();
         let mut pop_future = bob.udp_pop(bob_fd);
-        must_let!(let Poll::Ready(Ok((Some(remote_addr), received_buf_a))) = Future::poll(Pin::new(&mut pop_future), &mut ctx));
+        let (remote_addr, received_buf_a) = match Future::poll(Pin::new(&mut pop_future), &mut ctx)
+        {
+            Poll::Ready(Ok((Some(remote_addr), received_buf_a))) => {
+                Ok((remote_addr, received_buf_a))
+            }
+            _ => Err(()),
+        }
+        .unwrap();
         assert_eq!(remote_addr, alice_addr);
         assert_eq!(received_buf_a, buf_a);
 
@@ -302,7 +324,14 @@ fn udp_loop2_ping_pong() {
         // Receive data from Bob.
         alice.receive(bob.rt().pop_frame()).unwrap();
         let mut pop_future = alice.udp_pop(alice_fd);
-        must_let!(let Poll::Ready(Ok((Some(remote_addr), received_buf_b))) = Future::poll(Pin::new(&mut pop_future), &mut ctx));
+        let (remote_addr, received_buf_b) = match Future::poll(Pin::new(&mut pop_future), &mut ctx)
+        {
+            Poll::Ready(Ok((Some(remote_addr), received_buf_b))) => {
+                Ok((remote_addr, received_buf_b))
+            }
+            _ => Err(()),
+        }
+        .unwrap();
         assert_eq!(remote_addr, bob_addr);
         assert_eq!(received_buf_b, buf_b);
     }
@@ -328,13 +357,13 @@ fn udp_bind_address_in_use() {
     alice.udp_bind(alice_fd, alice_addr).unwrap();
 
     // Try to bind Alice again.
-    must_let!(let Err(err) = alice.udp_bind(alice_fd, alice_addr));
-    assert_eq!(
-        err,
-        Fail::Malformed {
+    match alice.udp_bind(alice_fd, alice_addr) {
+        Err(Fail::Malformed {
             details: "Port already listening",
-        }
-    );
+        }) => Ok(()),
+        _ => Err(()),
+    }
+    .unwrap();
 
     // Close peers.
     alice.udp_close(alice_fd).unwrap();
@@ -351,8 +380,11 @@ fn udp_bind_bad_file_descriptor() {
     let alice_fd: IoQueueDescriptor = IoQueueDescriptor::try_from(usize::MAX).unwrap();
 
     // Try to bind Alice.
-    must_let!(let Err(err) = alice.udp_bind(alice_fd, alice_addr));
-    assert_eq!(err, Fail::BadFileDescriptor {});
+    match alice.udp_bind(alice_fd, alice_addr) {
+        Err(Fail::BadFileDescriptor {}) => Ok(()),
+        _ => Err(()),
+    }
+    .unwrap();
 }
 
 //==============================================================================
@@ -371,13 +403,19 @@ fn udp_udp_close_bad_file_descriptor() {
     alice.udp_bind(alice_fd, alice_addr).unwrap();
 
     // Try to udp_close bad file descriptor.
-    must_let!(let Err(err) = alice.udp_close(IoQueueDescriptor::try_from(usize::MAX).unwrap()));
-    assert_eq!(err, Fail::BadFileDescriptor {});
+    match alice.udp_close(IoQueueDescriptor::try_from(usize::MAX).unwrap()) {
+        Err(Fail::BadFileDescriptor {}) => Ok(()),
+        _ => Err(()),
+    }
+    .unwrap();
 
     // Try to udp_close Alice two times.
     alice.udp_close(alice_fd).unwrap();
-    must_let!(let Err(err) = alice.udp_close(alice_fd));
-    assert_eq!(err, Fail::BadFileDescriptor {});
+    match alice.udp_close(alice_fd) {
+        Err(Fail::BadFileDescriptor {}) => Ok(()),
+        _ => Err(()),
+    }
+    .unwrap();
 }
 
 //==============================================================================
@@ -409,13 +447,13 @@ fn udp_pop_not_bound() {
     now += Duration::from_micros(1);
 
     // Receive data from Alice.
-    must_let!(let Err(err) = bob.receive(alice.rt().pop_frame()));
-    assert_eq!(
-        err,
-        Fail::Malformed {
+    match bob.receive(alice.rt().pop_frame()) {
+        Err(Fail::Malformed {
             details: "Port not bound",
-        }
-    );
+        }) => Ok(()),
+        _ => Err(()),
+    }
+    .unwrap();
 
     // Close peers.
     alice.udp_close(alice_fd).unwrap();
@@ -446,8 +484,15 @@ fn udp_push_bad_file_descriptor() {
 
     // Send data to Bob.
     let buf = BytesMut::from(&vec![0x5a; 32][..]).freeze();
-    must_let!(let Err(err) = alice.udp_pushto(IoQueueDescriptor::try_from(usize::MAX).unwrap(), buf.clone(), bob_addr));
-    assert_eq!(err, Fail::BadFileDescriptor {});
+    match alice.udp_pushto(
+        IoQueueDescriptor::try_from(usize::MAX).unwrap(),
+        buf.clone(),
+        bob_addr,
+    ) {
+        Err(Fail::BadFileDescriptor {}) => Ok(()),
+        _ => Err(()),
+    }
+    .unwrap();
 
     alice.rt().poll_scheduler();
     now += Duration::from_micros(1);

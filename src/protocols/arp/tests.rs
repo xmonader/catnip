@@ -4,18 +4,14 @@
 use super::packet::{ArpHeader, ArpOperation};
 use crate::{
     fail::Fail,
-    protocols::ethernet2::Ethernet2Header,
+    protocols::ethernet2::{Ethernet2Header, MacAddress},
     runtime::Runtime,
     test_helpers::{self, TestRuntime},
 };
-
 use futures::{
     task::{noop_waker_ref, Context},
     FutureExt,
 };
-
-use must_let::must_let;
-
 use std::{
     future::Future,
     task::Poll,
@@ -45,7 +41,13 @@ fn immediate_reply() {
 
     // bob hasn't heard of alice before, so he will ignore the request.
     info!("passing ARP request to bob (should be ignored)...");
-    must_let!(let Err(Fail::Ignored { .. }) = bob.receive(request.clone()));
+    assert_eq!(
+        match bob.receive(request.clone()) {
+            Err(Fail::Ignored { .. }) => Ok(()),
+            _ => Err(()),
+        },
+        Ok(())
+    );
     let cache = bob.export_arp_cache();
     assert!(cache.get(&test_helpers::ALICE_IPV4).is_none());
 
@@ -64,7 +66,11 @@ fn immediate_reply() {
     alice.receive(reply).unwrap();
     let now = now + Duration::from_micros(1);
     alice.rt().advance_clock(now);
-    must_let!(let Poll::Ready(Ok(link_addr)) = Future::poll(fut.as_mut(), &mut ctx));
+    let link_addr = match Future::poll(fut.as_mut(), &mut ctx) {
+        Poll::Ready(Ok(link_addr)) => Ok(link_addr),
+        _ => Err(()),
+    }
+    .unwrap();
     assert_eq!(test_helpers::CARRIE_MAC, link_addr);
 }
 
@@ -93,7 +99,13 @@ fn slow_reply() {
 
     // bob hasn't heard of alice before, so he will ignore the request.
     info!("passing ARP request to bob (should be ignored)...");
-    must_let!(let Err(Fail::Ignored { .. }) = bob.receive(request.clone()));
+    assert_eq!(
+        match bob.receive(request.clone()) {
+            Err(Fail::Ignored { .. }) => Ok(()),
+            _ => Err(()),
+        },
+        Ok(())
+    );
 
     let cache = bob.export_arp_cache();
     assert!(cache.get(&test_helpers::ALICE_IPV4).is_none());
@@ -112,7 +124,11 @@ fn slow_reply() {
     alice.receive(reply).unwrap();
     now += Duration::from_micros(1);
     alice.rt().advance_clock(now);
-    must_let!(let Poll::Ready(Ok(link_addr)) = Future::poll(fut.as_mut(), &mut ctx));
+    let link_addr: MacAddress = match Future::poll(fut.as_mut(), &mut ctx) {
+        Poll::Ready(Ok(link_addr)) => Ok(link_addr),
+        _ => Err(()),
+    }
+    .unwrap();
     assert_eq!(test_helpers::CARRIE_MAC, link_addr);
 }
 
@@ -149,6 +165,9 @@ fn no_reply() {
     // timeout
     now += options.get_request_timeout();
     alice.rt().advance_clock(now);
-
-    must_let!(let Poll::Ready(Err(Fail::Timeout {})) = Future::poll(fut.as_mut(), &mut ctx));
+    match Future::poll(fut.as_mut(), &mut ctx) {
+        Poll::Ready(Err(Fail::Timeout {})) => Ok(()),
+        _ => Err(()),
+    }
+    .unwrap();
 }
