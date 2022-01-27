@@ -39,6 +39,7 @@ unicycle = { git = "https://github.com/sujayakar/unicycle", rev = "44c0e8f62cb93
 uniset = "0.2.0"
 async-trait = "0.1.50"
 perftools = { git = "https://github.com/demikernel/perftools", rev = "10740b3c46440f4eef740c401d8fd2385998c16a" }
+catwalk= { git = "https://github.com/demikernel/catwalk", rev = "9e8d33a199ecfa0c4cbe41e8b83fa3ef6d7793e7"}
 
 [dev-dependencies]
 criterion = "0.3.4"

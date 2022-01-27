@@ -20,8 +20,8 @@ use crate::{
     },
     queue::{IoQueueDescriptor, IoQueueTable, IoQueueType},
     runtime::Runtime,
-    scheduler::SchedulerHandle,
 };
+use catwalk::SchedulerHandle;
 use libc::c_int;
 use must_let::must_let;
 use std::time::Instant;

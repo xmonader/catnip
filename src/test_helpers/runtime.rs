@@ -8,11 +8,11 @@ use crate::{
     logging,
     protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp, udp},
     runtime::{PacketBuf, Runtime, RECEIVE_BATCH_SIZE},
-    scheduler::{Scheduler, SchedulerHandle},
     test_helpers::Engine,
     timer::{Timer, TimerRc},
 };
 use arrayvec::ArrayVec;
+use catwalk::{Scheduler, SchedulerHandle};
 use futures::FutureExt;
 use rand::{
     distributions::{Distribution, Standard},

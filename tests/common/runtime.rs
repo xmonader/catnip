@@ -12,21 +12,17 @@ use catnip::{
     protocols::{arp::ArpConfig, tcp, udp},
     runtime::Runtime,
     runtime::{PacketBuf, RECEIVE_BATCH_SIZE},
-    scheduler::{Scheduler, SchedulerHandle},
     timer::{Timer, TimerRc},
 };
-
+use catwalk::{Scheduler, SchedulerHandle};
 use crossbeam_channel::{self};
-
 use futures::FutureExt;
-
 use rand::{
     distributions::{Distribution, Standard},
     rngs::SmallRng,
     seq::SliceRandom,
     Rng, SeedableRng,
 };
-
 use std::{
     cell::RefCell,
     collections::HashMap,

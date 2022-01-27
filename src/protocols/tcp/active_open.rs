@@ -12,8 +12,8 @@ use crate::{
         tcp::segment::{TcpHeader, TcpOptions2, TcpSegment},
     },
     runtime::{Runtime, RuntimeBuf},
-    scheduler::SchedulerHandle,
 };
+use catwalk::SchedulerHandle;
 use std::{
     cell::RefCell,
     convert::TryInto,

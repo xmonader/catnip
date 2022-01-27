@@ -11,8 +11,8 @@ use crate::{
         MacAddress, {EtherType2, Ethernet2Header},
     },
     runtime::Runtime,
-    scheduler::SchedulerHandle,
 };
+use catwalk::SchedulerHandle;
 use futures::{
     channel::oneshot::{channel, Receiver, Sender},
     FutureExt,

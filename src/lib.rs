@@ -39,5 +39,4 @@ pub mod options;
 pub mod protocols;
 pub mod queue;
 pub mod runtime;
-pub mod scheduler;
 pub mod timer;
