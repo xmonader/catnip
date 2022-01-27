@@ -21,7 +21,6 @@ use crate::{
     test_helpers::{self, TestRuntime},
 };
 use futures::task::noop_waker_ref;
-use must_let::must_let;
 use rand;
 use std::{
     collections::VecDeque,
@@ -80,7 +79,11 @@ fn send_data(
     advance_clock(Some(receiver), Some(sender), now);
 
     // Push completes.
-    must_let!(let Poll::Ready(Ok(())) = Future::poll(Pin::new(&mut push_future), ctx));
+    match Future::poll(Pin::new(&mut push_future), ctx) {
+        Poll::Ready(Ok(())) => Ok(()),
+        _ => Err(()),
+    }
+    .unwrap();
 
     trace!("====> push completed");
 
@@ -107,7 +110,11 @@ fn recv_data(
     receiver.receive(bytes).unwrap();
 
     // Pop completes
-    must_let!(let Poll::Ready(Ok(_)) = Future::poll(Pin::new(&mut pop_future), ctx));
+    match Future::poll(Pin::new(&mut pop_future), ctx) {
+        Poll::Ready(Ok(_)) => Ok(()),
+        _ => Err(()),
+    }
+    .unwrap();
 
     trace!("====> pop completed");
 }

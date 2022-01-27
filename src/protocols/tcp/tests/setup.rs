@@ -20,7 +20,6 @@ use crate::{
     test_helpers::{self, TestRuntime},
 };
 use futures::task::noop_waker_ref;
-use must_let::must_let;
 use std::{
     convert::TryFrom,
     future::Future,
@@ -71,7 +70,11 @@ fn test_connection_timeout() {
         client.rt().poll_scheduler();
     }
 
-    must_let!(let Poll::Ready(Err(Fail::Timeout{})) = Future::poll(Pin::new(&mut connect_future), &mut ctx));
+    match Future::poll(Pin::new(&mut connect_future), &mut ctx) {
+        Poll::Ready(Err(Fail::Timeout {})) => Ok(()),
+        _ => Err(()),
+    }
+    .unwrap();
 }
 
 //=============================================================================
@@ -136,7 +139,13 @@ fn test_refuse_connection_early_rst() {
     advance_clock(Some(&mut server), Some(&mut client), &mut now);
 
     // Server: SYN_RCVD state at T(2).
-    must_let!(let Err(Fail::Malformed{ details : "Invalid flags"}) = server.receive(buf));
+    match server.receive(buf) {
+        Err(Fail::Malformed {
+            details: "Invalid flags",
+        }) => Ok(()),
+        _ => Err(()),
+    }
+    .unwrap();
 }
 
 //=============================================================================
@@ -201,7 +210,13 @@ fn test_refuse_connection_early_ack() {
     advance_clock(Some(&mut server), Some(&mut client), &mut now);
 
     // Server: SYN_RCVD state at T(2).
-    must_let!(let Err(Fail::Malformed{ details : "Invalid flags"}) = server.receive(buf));
+    match server.receive(buf) {
+        Err(Fail::Malformed {
+            details: "Invalid flags",
+        }) => Ok(()),
+        _ => Err(()),
+    }
+    .unwrap();
 }
 
 //=============================================================================
@@ -276,7 +291,13 @@ fn test_refuse_connection_missing_syn() {
     advance_clock(Some(&mut server), Some(&mut client), &mut now);
 
     // Server: SYN_RCVD state at T(2).
-    must_let!(let Err(Fail::Malformed{ details : "Invalid flags"}) = server.receive(buf));
+    match server.receive(buf) {
+        Err(Fail::Malformed {
+            details: "Invalid flags",
+        }) => Ok(()),
+        _ => Err(()),
+    }
+    .unwrap();
 }
 
 //=============================================================================
@@ -518,8 +539,16 @@ pub fn connection_setup(
     // Server: ESTABLISHED at T(4).
     connection_setup_sync_rcvd_established(server, bytes);
 
-    must_let!(let Poll::Ready(Ok(server_fd)) = Future::poll(Pin::new(&mut accept_future), ctx));
-    must_let!(let Poll::Ready(Ok(())) = Future::poll(Pin::new(&mut connect_future), ctx));
+    let server_fd = match Future::poll(Pin::new(&mut accept_future), ctx) {
+        Poll::Ready(Ok(server_fd)) => Ok(server_fd),
+        _ => Err(()),
+    }
+    .unwrap();
+    match Future::poll(Pin::new(&mut connect_future), ctx) {
+        Poll::Ready(Ok(())) => Ok(()),
+        _ => Err(()),
+    }
+    .unwrap();
 
     (server_fd, client_fd)
 }
