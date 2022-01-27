@@ -3,6 +3,7 @@
 
 pub mod bytes;
 pub mod hashttlcache;
+pub mod intrusive;
 pub mod watched;
 
 pub use hashttlcache::HashTtlCache;

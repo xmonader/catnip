@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+use crate::collections::intrusive::pairing_heap::{HeapNode, PairingHeap};
 use futures::future::FusedFuture;
-use futures_intrusive::intrusive_pairing_heap::{HeapNode, PairingHeap};
 use std::{
     cell::RefCell,
     future::Future,
