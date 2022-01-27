@@ -19,8 +19,8 @@ use crate::{
     },
     queue::IoQueueDescriptor,
     runtime::Runtime,
-    scheduler::SchedulerHandle,
 };
+use catwalk::SchedulerHandle;
 use futures::{channel::mpsc, stream::StreamExt};
 use std::collections::HashMap;
 

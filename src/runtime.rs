@@ -4,9 +4,9 @@ use crate::{
     futures::operation::FutureOperation,
     interop::dmtr_sgarray_t,
     protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp, udp},
-    scheduler::{Scheduler, SchedulerHandle},
 };
 use arrayvec::ArrayVec;
+use catwalk::{Scheduler, SchedulerHandle};
 use rand::distributions::{Distribution, Standard};
 use std::{
     fmt::Debug,

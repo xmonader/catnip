@@ -11,9 +11,9 @@ use crate::{
         ipv4::{Ipv4Header, Ipv4Protocol2},
     },
     runtime::Runtime,
-    scheduler::SchedulerHandle,
 };
 use byteorder::{ByteOrder, NetworkEndian};
+use catwalk::SchedulerHandle;
 use futures::{
     channel::{
         mpsc,

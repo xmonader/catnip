@@ -13,8 +13,8 @@ use self::background::background;
 use crate::protocols::ipv4::Ipv4Endpoint;
 use crate::{
     fail::Fail, protocols::tcp::segment::TcpHeader, queue::IoQueueDescriptor, runtime::Runtime,
-    scheduler::SchedulerHandle,
 };
+use catwalk::SchedulerHandle;
 use futures::channel::mpsc;
 use std::{
     rc::Rc,

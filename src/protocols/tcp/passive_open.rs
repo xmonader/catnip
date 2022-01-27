@@ -16,8 +16,8 @@ use crate::{
     },
     runtime::Runtime,
     runtime::RuntimeBuf,
-    scheduler::SchedulerHandle,
 };
+use catwalk::SchedulerHandle;
 use std::collections::{HashMap, HashSet};
 use std::{
     cell::RefCell,
