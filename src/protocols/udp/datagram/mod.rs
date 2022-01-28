@@ -3,6 +3,7 @@
 
 mod header;
 
+pub use self::header::UDP_HEADER_SIZE;
 use crate::{
     protocols::{ethernet2::Ethernet2Header, ipv4::Ipv4Header},
     runtime::PacketBuf,

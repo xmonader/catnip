@@ -8,9 +8,6 @@ use crate::{
 };
 use std::marker::PhantomData;
 
-#[allow(unused)]
-const MAX_ICMPV4_DATAGRAM_SIZE: usize = 576;
-
 /// Message for ICMP
 pub struct Icmpv4Message<T> {
     ethernet2_hdr: Ethernet2Header,

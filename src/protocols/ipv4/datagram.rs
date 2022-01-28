@@ -8,7 +8,8 @@ use std::{
     net::Ipv4Addr,
 };
 
-const IPV4_HEADER_SIZE: usize = 20;
+/// Size of IPv4 Headers (in bytes)
+pub const IPV4_HEADER_SIZE: usize = 20;
 
 // todo: need citation
 const DEFAULT_IPV4_TTL: u8 = 255;

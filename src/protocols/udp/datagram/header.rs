@@ -17,7 +17,7 @@ use std::convert::{TryFrom, TryInto};
 //==============================================================================
 
 /// Size of a UDP header (in bytes).
-const UDP_HEADER_SIZE: usize = 8;
+pub const UDP_HEADER_SIZE: usize = 8;
 
 ///
 /// Header for UDP Packets
