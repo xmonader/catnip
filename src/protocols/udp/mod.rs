@@ -13,5 +13,6 @@ mod tests;
 
 pub use self::config::UdpConfig;
 pub use self::datagram::UdpHeader;
+pub use self::datagram::UDP_HEADER_SIZE;
 pub use self::futures::UdpPopFuture;
 pub use self::peer::UdpPeer;
