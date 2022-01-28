@@ -8,7 +8,8 @@ use crate::{
 use byteorder::{ByteOrder, NetworkEndian};
 use std::convert::{TryFrom, TryInto};
 
-const ETHERNET2_HEADER_SIZE: usize = 14;
+pub const ETHERNET2_HEADER_SIZE: usize = 14;
+pub const MIN_PAYLOAD_SIZE: usize = 46;
 
 #[derive(Clone, Debug)]
 pub struct Ethernet2Header {
