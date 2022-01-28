@@ -6,11 +6,8 @@ use crate::{fail::Fail, runtime::RuntimeBuf};
 use byteorder::{ByteOrder, NetworkEndian};
 use std::convert::TryInto;
 
-#[allow(unused)]
-const MAX_ICMPV4_DATAGRAM_SIZE: usize = 576;
-
 /// Size of ICMPv4 Headers (in bytes)
-const ICMPV4_HEADER_SIZE: usize = 8;
+pub const ICMPV4_HEADER_SIZE: usize = 8;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Icmpv4Header {
