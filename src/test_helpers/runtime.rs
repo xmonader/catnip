@@ -5,7 +5,7 @@ use crate::{
     futures::operation::FutureOperation,
     logging,
     protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp, udp},
-    runtime::{MemoryRuntime, PacketBuf, Runtime, RECEIVE_BATCH_SIZE},
+    runtime::{MemoryRuntime, PacketBuf, Runtime, SchedulerRuntime, RECEIVE_BATCH_SIZE},
     test_helpers::Engine,
     timer::{Timer, TimerRc},
 };
@@ -183,8 +183,38 @@ impl MemoryRuntime for TestRuntime {
     }
 }
 
-impl Runtime for TestRuntime {
+impl SchedulerRuntime for TestRuntime {
     type WaitFuture = crate::timer::WaitFuture<TimerRc>;
+
+    fn advance_clock(&self, now: Instant) {
+        self.inner.borrow_mut().timer.0.advance_clock(now);
+    }
+
+    fn wait(&self, duration: Duration) -> Self::WaitFuture {
+        let inner = self.inner.borrow_mut();
+        let now = inner.timer.0.now();
+        inner
+            .timer
+            .0
+            .wait_until(inner.timer.clone(), now + duration)
+    }
+
+    fn wait_until(&self, when: Instant) -> Self::WaitFuture {
+        let inner = self.inner.borrow_mut();
+        inner.timer.0.wait_until(inner.timer.clone(), when)
+    }
+
+    fn now(&self) -> Instant {
+        self.inner.borrow().timer.0.now()
+    }
+
+    fn spawn<F: Future<Output = ()> + 'static>(&self, future: F) -> SchedulerHandle {
+        self.scheduler
+            .insert(FutureOperation::Background(future.boxed_local()))
+    }
+}
+
+impl Runtime for TestRuntime {
     fn transmit(&self, pkt: impl PacketBuf<Bytes>) {
         let header_size = pkt.header_size();
         let body_size = pkt.body_size();
@@ -229,28 +259,6 @@ impl Runtime for TestRuntime {
         self.arp_options.clone()
     }
 
-    fn advance_clock(&self, now: Instant) {
-        self.inner.borrow_mut().timer.0.advance_clock(now);
-    }
-
-    fn wait(&self, duration: Duration) -> Self::WaitFuture {
-        let inner = self.inner.borrow_mut();
-        let now = inner.timer.0.now();
-        inner
-            .timer
-            .0
-            .wait_until(inner.timer.clone(), now + duration)
-    }
-
-    fn wait_until(&self, when: Instant) -> Self::WaitFuture {
-        let inner = self.inner.borrow_mut();
-        inner.timer.0.wait_until(inner.timer.clone(), when)
-    }
-
-    fn now(&self) -> Instant {
-        self.inner.borrow().timer.0.now()
-    }
-
     fn rng_gen<T>(&self) -> T
     where
         Standard: Distribution<T>,
@@ -262,10 +270,5 @@ impl Runtime for TestRuntime {
     fn rng_shuffle<T>(&self, slice: &mut [T]) {
         let mut inner = self.inner.borrow_mut();
         slice.shuffle(&mut inner.rng);
-    }
-
-    fn spawn<F: Future<Output = ()> + 'static>(&self, future: F) -> SchedulerHandle {
-        self.scheduler
-            .insert(FutureOperation::Background(future.boxed_local()))
     }
 }

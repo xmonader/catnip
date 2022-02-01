@@ -4,7 +4,7 @@
 use super::packet::{ArpHeader, ArpOperation};
 use crate::{
     protocols::ethernet2::{Ethernet2Header, MacAddress},
-    runtime::Runtime,
+    runtime::{Runtime, SchedulerRuntime},
     test_helpers::{self, TestRuntime},
 };
 use futures::{

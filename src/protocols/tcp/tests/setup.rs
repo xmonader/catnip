@@ -12,7 +12,7 @@ use crate::{
             SeqNumber,
         },
     },
-    runtime::{MemoryRuntime, PacketBuf, Runtime},
+    runtime::{MemoryRuntime, PacketBuf, Runtime, SchedulerRuntime},
     test_helpers::Engine,
     test_helpers::{self, TestRuntime},
 };

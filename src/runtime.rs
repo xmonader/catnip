@@ -34,11 +34,19 @@ pub trait MemoryRuntime {
     fn clone_sgarray(&self, sga: &dmtr_sgarray_t) -> Self::Buf;
 }
 
-/// Common interface that transport layers should implement? E.g. DPDK and RDMA.
-pub trait Runtime: Clone + Unpin + MemoryRuntime + 'static {
+pub trait SchedulerRuntime {
     type WaitFuture: Future<Output = ()>;
 
+    fn wait(&self, duration: Duration) -> Self::WaitFuture;
+    fn wait_until(&self, when: Instant) -> Self::WaitFuture;
+    fn now(&self) -> Instant;
     fn advance_clock(&self, now: Instant);
+
+    fn spawn<F: Future<Output = ()> + 'static>(&self, future: F) -> SchedulerHandle;
+}
+
+/// Common interface that transport layers should implement? E.g. DPDK and RDMA.
+pub trait Runtime: Clone + Unpin + SchedulerRuntime + MemoryRuntime + 'static {
     fn transmit(&self, pkt: impl PacketBuf<Self::Buf>);
     fn receive(&self) -> ArrayVec<Self::Buf, RECEIVE_BATCH_SIZE>;
 
@@ -48,15 +56,10 @@ pub trait Runtime: Clone + Unpin + MemoryRuntime + 'static {
     fn tcp_options(&self) -> tcp::Options<Self>;
     fn udp_options(&self) -> udp::UdpConfig;
 
-    fn wait(&self, duration: Duration) -> Self::WaitFuture;
-    fn wait_until(&self, when: Instant) -> Self::WaitFuture;
-    fn now(&self) -> Instant;
-
     fn rng_gen<T>(&self) -> T
     where
         Standard: Distribution<T>;
     fn rng_shuffle<T>(&self, slice: &mut [T]);
 
-    fn spawn<F: Future<Output = ()> + 'static>(&self, future: F) -> SchedulerHandle;
     fn scheduler(&self) -> &Scheduler<FutureOperation<Self>>;
 }

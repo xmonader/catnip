@@ -7,7 +7,7 @@ use catnip::{
     futures::operation::FutureOperation,
     protocols::ethernet2::MacAddress,
     protocols::{arp::ArpConfig, tcp, udp},
-    runtime::{MemoryRuntime, Runtime},
+    runtime::{MemoryRuntime, Runtime, SchedulerRuntime},
     runtime::{PacketBuf, RECEIVE_BATCH_SIZE},
     timer::{Timer, TimerRc},
 };
@@ -164,9 +164,38 @@ impl MemoryRuntime for DummyRuntime {
     }
 }
 
-impl Runtime for DummyRuntime {
+impl SchedulerRuntime for DummyRuntime {
     type WaitFuture = catnip::timer::WaitFuture<TimerRc>;
 
+    fn advance_clock(&self, now: Instant) {
+        self.inner.borrow_mut().timer.0.advance_clock(now);
+    }
+
+    fn wait(&self, duration: Duration) -> Self::WaitFuture {
+        let inner = self.inner.borrow_mut();
+        let now = inner.timer.0.now();
+        inner
+            .timer
+            .0
+            .wait_until(inner.timer.clone(), now + duration)
+    }
+
+    fn wait_until(&self, when: Instant) -> Self::WaitFuture {
+        let inner = self.inner.borrow_mut();
+        inner.timer.0.wait_until(inner.timer.clone(), when)
+    }
+
+    fn now(&self) -> Instant {
+        self.inner.borrow().timer.0.now()
+    }
+
+    fn spawn<F: Future<Output = ()> + 'static>(&self, future: F) -> SchedulerHandle {
+        self.scheduler
+            .insert(FutureOperation::Background(future.boxed_local()))
+    }
+}
+
+impl Runtime for DummyRuntime {
     fn transmit(&self, pkt: impl PacketBuf<Bytes>) {
         let header_size = pkt.header_size();
         let body_size = pkt.body_size();
@@ -215,28 +244,6 @@ impl Runtime for DummyRuntime {
         self.inner.borrow().arp_options.clone()
     }
 
-    fn advance_clock(&self, now: Instant) {
-        self.inner.borrow_mut().timer.0.advance_clock(now);
-    }
-
-    fn wait(&self, duration: Duration) -> Self::WaitFuture {
-        let inner = self.inner.borrow_mut();
-        let now = inner.timer.0.now();
-        inner
-            .timer
-            .0
-            .wait_until(inner.timer.clone(), now + duration)
-    }
-
-    fn wait_until(&self, when: Instant) -> Self::WaitFuture {
-        let inner = self.inner.borrow_mut();
-        inner.timer.0.wait_until(inner.timer.clone(), when)
-    }
-
-    fn now(&self) -> Instant {
-        self.inner.borrow().timer.0.now()
-    }
-
     fn rng_gen<T>(&self) -> T
     where
         Standard: Distribution<T>,
@@ -248,10 +255,5 @@ impl Runtime for DummyRuntime {
     fn rng_shuffle<T>(&self, slice: &mut [T]) {
         let mut inner = self.inner.borrow_mut();
         slice.shuffle(&mut inner.rng);
-    }
-
-    fn spawn<F: Future<Output = ()> + 'static>(&self, future: F) -> SchedulerHandle {
-        self.scheduler
-            .insert(FutureOperation::Background(future.boxed_local()))
     }
 }
