@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 #![cfg_attr(feature = "strict", deny(clippy:all))]
+#![deny(clippy::all)]
 #![feature(new_uninit)]
 #![feature(never_type)]
 #![feature(try_blocks)]
