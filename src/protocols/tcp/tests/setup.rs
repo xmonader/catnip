@@ -12,7 +12,7 @@ use crate::{
             SeqNumber,
         },
     },
-    runtime::{PacketBuf, Runtime},
+    runtime::{MemoryRuntime, PacketBuf, Runtime},
     test_helpers::Engine,
     test_helpers::{self, TestRuntime},
 };
@@ -107,7 +107,7 @@ fn test_refuse_connection_early_rst() {
     // Temper packet.
     let (eth2_header, ipv4_header, tcp_header): (Ethernet2Header, Ipv4Header, TcpHeader) =
         extract_headers(bytes.clone());
-    let segment: TcpSegment<<TestRuntime as Runtime>::Buf> = TcpSegment {
+    let segment: TcpSegment<<TestRuntime as MemoryRuntime>::Buf> = TcpSegment {
         ethernet2_hdr: eth2_header,
         ipv4_hdr: ipv4_header,
         tcp_hdr: TcpHeader {
@@ -178,7 +178,7 @@ fn test_refuse_connection_early_ack() {
     // Temper packet.
     let (eth2_header, ipv4_header, tcp_header): (Ethernet2Header, Ipv4Header, TcpHeader) =
         extract_headers(bytes.clone());
-    let segment: TcpSegment<<TestRuntime as Runtime>::Buf> = TcpSegment {
+    let segment: TcpSegment<<TestRuntime as MemoryRuntime>::Buf> = TcpSegment {
         ethernet2_hdr: eth2_header,
         ipv4_hdr: ipv4_header,
         tcp_hdr: TcpHeader {
@@ -259,7 +259,7 @@ fn test_refuse_connection_missing_syn() {
     // Temper packet.
     let (eth2_header, ipv4_header, tcp_header): (Ethernet2Header, Ipv4Header, TcpHeader) =
         extract_headers(bytes.clone());
-    let segment: TcpSegment<<TestRuntime as Runtime>::Buf> = TcpSegment {
+    let segment: TcpSegment<<TestRuntime as MemoryRuntime>::Buf> = TcpSegment {
         ethernet2_hdr: eth2_header,
         ipv4_hdr: ipv4_header,
         tcp_hdr: TcpHeader {

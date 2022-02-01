@@ -7,7 +7,7 @@ use catnip::{
     futures::operation::FutureOperation,
     protocols::ethernet2::MacAddress,
     protocols::{arp::ArpConfig, tcp, udp},
-    runtime::Runtime,
+    runtime::{MemoryRuntime, Runtime},
     runtime::{PacketBuf, RECEIVE_BATCH_SIZE},
     timer::{Timer, TimerRc},
 };
@@ -98,8 +98,7 @@ impl DummyRuntime {
 // Trait Implementations
 //==============================================================================
 
-impl Runtime for DummyRuntime {
-    type WaitFuture = catnip::timer::WaitFuture<TimerRc>;
+impl MemoryRuntime for DummyRuntime {
     type Buf = Bytes;
 
     fn into_sgarray(&self, buf: Bytes) -> dmtr_sgarray_t {
@@ -163,6 +162,10 @@ impl Runtime for DummyRuntime {
         }
         buf.freeze()
     }
+}
+
+impl Runtime for DummyRuntime {
+    type WaitFuture = catnip::timer::WaitFuture<TimerRc>;
 
     fn transmit(&self, pkt: impl PacketBuf<Bytes>) {
         let header_size = pkt.header_size();

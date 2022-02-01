@@ -5,7 +5,7 @@ use crate::{
     futures::operation::FutureOperation,
     logging,
     protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp, udp},
-    runtime::{PacketBuf, Runtime, RECEIVE_BATCH_SIZE},
+    runtime::{MemoryRuntime, PacketBuf, Runtime, RECEIVE_BATCH_SIZE},
     test_helpers::Engine,
     timer::{Timer, TimerRc},
 };
@@ -119,9 +119,8 @@ impl TestRuntime {
 // Trait Implementations
 //==============================================================================
 
-impl Runtime for TestRuntime {
+impl MemoryRuntime for TestRuntime {
     type Buf = Bytes;
-    type WaitFuture = crate::timer::WaitFuture<TimerRc>;
 
     fn into_sgarray(&self, buf: Bytes) -> dmtr_sgarray_t {
         let buf_copy: Box<[u8]> = (&buf[..]).into();
@@ -182,7 +181,10 @@ impl Runtime for TestRuntime {
         }
         buf.freeze()
     }
+}
 
+impl Runtime for TestRuntime {
+    type WaitFuture = crate::timer::WaitFuture<TimerRc>;
     fn transmit(&self, pkt: impl PacketBuf<Bytes>) {
         let header_size = pkt.header_size();
         let body_size = pkt.body_size();

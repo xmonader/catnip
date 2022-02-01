@@ -10,10 +10,8 @@ mod common;
 
 use crate::common::libos::*;
 use crate::common::{arp, ALICE_IPV4, ALICE_MAC, BOB_IPV4, BOB_MAC, PORT_BASE};
-use catnip::{
-    protocols::{ip, ipv4::Ipv4Endpoint},
-    runtime::Runtime,
-};
+use catnip::protocols::{ip, ipv4::Ipv4Endpoint};
+use catnip::runtime::MemoryRuntime;
 use crossbeam_channel::{self};
 use libc;
 use runtime::types::dmtr_opcode_t;

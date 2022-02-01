@@ -3,7 +3,8 @@
 
 use super::runtime::DummyRuntime;
 
-use catnip::{libos::LibOS, protocols::ethernet2::MacAddress, runtime::Runtime};
+use catnip::runtime::MemoryRuntime;
+use catnip::{libos::LibOS, protocols::ethernet2::MacAddress};
 use crossbeam_channel::{self, Receiver, Sender};
 use flexi_logger::Logger;
 use runtime::memory::{Bytes, BytesMut};

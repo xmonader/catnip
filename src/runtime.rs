@@ -24,16 +24,19 @@ pub trait PacketBuf<T>: Sized {
     fn take_body(self) -> Option<T>;
 }
 
-/// Common interface that transport layers should implement? E.g. DPDK and RDMA.
-pub trait Runtime: Clone + Unpin + 'static {
+pub trait MemoryRuntime {
     type Buf: RuntimeBuf;
-    type WaitFuture: Future<Output = ()>;
 
     #[allow(clippy::wrong_self_convention)]
     fn into_sgarray(&self, buf: Self::Buf) -> dmtr_sgarray_t;
     fn alloc_sgarray(&self, size: usize) -> dmtr_sgarray_t;
     fn free_sgarray(&self, sga: dmtr_sgarray_t);
     fn clone_sgarray(&self, sga: &dmtr_sgarray_t) -> Self::Buf;
+}
+
+/// Common interface that transport layers should implement? E.g. DPDK and RDMA.
+pub trait Runtime: Clone + Unpin + MemoryRuntime + 'static {
+    type WaitFuture: Future<Output = ()>;
 
     fn advance_clock(&self, now: Instant);
     fn transmit(&self, pkt: impl PacketBuf<Self::Buf>);
