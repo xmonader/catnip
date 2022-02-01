@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::fail::Fail;
 use byteorder::{ByteOrder, NetworkEndian};
+use runtime::fail::Fail;
 
 //==============================================================================
 // Icmpv4Type2

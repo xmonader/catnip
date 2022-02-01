@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 use crate::{
-    fail::Fail,
     protocols::{
         ethernet2::Ethernet2Header,
         ip,
@@ -10,9 +9,10 @@ use crate::{
         tcp::SeqNumber,
     },
     runtime::PacketBuf,
-    runtime::RuntimeBuf,
 };
 use byteorder::{ByteOrder, NetworkEndian, ReadBytesExt};
+use runtime::fail::Fail;
+use runtime::RuntimeBuf;
 use std::{
     convert::{TryFrom, TryInto},
     io::Cursor,

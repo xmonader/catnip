@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 use crate::{
-    fail::Fail,
     futures::UtilityMethods,
     protocols::{
         arp::ArpPeer,
@@ -21,6 +20,7 @@ use futures::{
     },
     FutureExt, StreamExt,
 };
+use runtime::fail::Fail;
 use std::{
     cell::RefCell, collections::HashMap, future::Future, net::Ipv4Addr, num::Wrapping, process,
     rc::Rc, time::Duration,

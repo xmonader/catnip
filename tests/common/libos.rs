@@ -3,19 +3,12 @@
 
 use super::runtime::DummyRuntime;
 
-use catnip::{
-    collections::bytes::{Bytes, BytesMut},
-    interop::dmtr_sgarray_t,
-    libos::LibOS,
-    protocols::ethernet2::MacAddress,
-    runtime::Runtime,
-};
-
+use catnip::{libos::LibOS, protocols::ethernet2::MacAddress, runtime::Runtime};
 use crossbeam_channel::{self, Receiver, Sender};
-
-use std::{collections::HashMap, net::Ipv4Addr, sync::Once, time::Instant};
-
 use flexi_logger::Logger;
+use runtime::memory::{Bytes, BytesMut};
+use runtime::types::dmtr_sgarray_t;
+use std::{collections::HashMap, net::Ipv4Addr, sync::Once, time::Instant};
 
 //==============================================================================
 // Constants & Structures

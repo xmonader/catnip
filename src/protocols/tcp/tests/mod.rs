@@ -6,14 +6,12 @@ pub mod setup;
 
 use std::net::Ipv4Addr;
 
-use crate::{
-    collections::bytes::Bytes,
-    protocols::{
-        ethernet2::{EtherType2, Ethernet2Header, MacAddress},
-        ipv4::Ipv4Header,
-        tcp::{segment::TcpHeader, SeqNumber},
-    },
+use crate::protocols::{
+    ethernet2::{EtherType2, Ethernet2Header, MacAddress},
+    ipv4::Ipv4Header,
+    tcp::{segment::TcpHeader, SeqNumber},
 };
+use runtime::memory::Bytes;
 
 //=============================================================================
 

@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::fail::Fail;
 use async_trait::async_trait;
 use futures::{future::FusedFuture, FutureExt};
+use runtime::fail::Fail;
 use std::future::Future;
 
 /// Provides useful high-level future-related methods.

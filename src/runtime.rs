@@ -2,32 +2,20 @@
 // Licensed under the MIT license.
 use crate::{
     futures::operation::FutureOperation,
-    interop::dmtr_sgarray_t,
     protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp, udp},
 };
 use arrayvec::ArrayVec;
 use catwalk::{Scheduler, SchedulerHandle};
 use rand::distributions::{Distribution, Standard};
+use runtime::types::dmtr_sgarray_t;
+use runtime::RuntimeBuf;
 use std::{
-    fmt::Debug,
     future::Future,
     net::Ipv4Addr,
-    ops::Deref,
     time::{Duration, Instant},
 };
 
 pub const RECEIVE_BATCH_SIZE: usize = 4;
-
-pub trait RuntimeBuf: Clone + Debug + Deref<Target = [u8]> + Sized + Unpin {
-    fn empty() -> Self;
-
-    fn from_slice(bytes: &[u8]) -> Self;
-
-    /// Remove `num_bytes` from the beginning of the buffer.
-    fn adjust(&mut self, num_bytes: usize);
-    /// Remove `num_bytes` from the end of the buffer;
-    fn trim(&mut self, num_bytes: usize);
-}
 
 pub trait PacketBuf<T>: Sized {
     fn header_size(&self) -> usize;
@@ -36,7 +24,7 @@ pub trait PacketBuf<T>: Sized {
     fn take_body(self) -> Option<T>;
 }
 
-/// Common interface that tranport layers should implement? E.g. DPDK and RDMA.
+/// Common interface that transport layers should implement? E.g. DPDK and RDMA.
 pub trait Runtime: Clone + Unpin + 'static {
     type Buf: RuntimeBuf;
     type WaitFuture: Future<Output = ()>;

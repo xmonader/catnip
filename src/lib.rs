@@ -22,7 +22,6 @@ extern crate derive_more;
 pub mod test_helpers;
 
 pub mod collections;
-pub mod fail;
 pub mod futures;
 pub mod interop;
 pub mod libos;
@@ -30,6 +29,5 @@ pub mod logging;
 pub mod operations;
 pub mod options;
 pub mod protocols;
-pub mod queue;
 pub mod runtime;
 pub mod timer;

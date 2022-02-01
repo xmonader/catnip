@@ -2,8 +2,9 @@
 // Licensed under the MIT license.
 
 use super::protocol::Icmpv4Type2;
-use crate::{fail::Fail, runtime::RuntimeBuf};
 use byteorder::{ByteOrder, NetworkEndian};
+use runtime::fail::Fail;
+use runtime::RuntimeBuf;
 use std::convert::TryInto;
 
 /// Size of ICMPv4 Headers (in bytes)

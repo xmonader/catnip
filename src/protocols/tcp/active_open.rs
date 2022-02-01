@@ -3,7 +3,6 @@
 
 use super::{constants::FALLBACK_MSS, established::ControlBlock, SeqNumber};
 use crate::{
-    fail::Fail,
     protocols::{
         arp::ArpPeer,
         ethernet2::{EtherType2, Ethernet2Header},
@@ -11,9 +10,11 @@ use crate::{
         ipv4::{Ipv4Header, Ipv4Protocol2},
         tcp::segment::{TcpHeader, TcpOptions2, TcpSegment},
     },
-    runtime::{Runtime, RuntimeBuf},
+    runtime::Runtime,
 };
 use catwalk::SchedulerHandle;
+use runtime::fail::Fail;
+use runtime::RuntimeBuf;
 use std::{
     cell::RefCell,
     convert::TryInto,

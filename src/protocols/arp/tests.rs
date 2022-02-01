@@ -3,7 +3,6 @@
 
 use super::packet::{ArpHeader, ArpOperation};
 use crate::{
-    fail::Fail,
     protocols::ethernet2::{Ethernet2Header, MacAddress},
     runtime::Runtime,
     test_helpers::{self, TestRuntime},
@@ -12,6 +11,7 @@ use futures::{
     task::{noop_waker_ref, Context},
     FutureExt,
 };
+use runtime::fail::Fail;
 use std::{
     future::Future,
     task::Poll,

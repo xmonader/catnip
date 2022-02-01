@@ -5,12 +5,11 @@
 //! the IO Queue abstraction, thus providing a standard interface for different kernel bypass
 //! mechanisms.
 use crate::{
-    fail::Fail,
     futures::{
         operation::{FutureOperation, UdpOperation},
         FutureResult,
     },
-    interop::{dmtr_qresult_t, dmtr_sgarray_t},
+    interop::pack_result,
     operations::OperationResult,
     protocols::{
         arp::ArpPeer,
@@ -18,11 +17,13 @@ use crate::{
         ipv4::Ipv4Endpoint,
         Peer,
     },
-    queue::{IoQueueDescriptor, IoQueueTable, IoQueueType},
     runtime::Runtime,
 };
 use catwalk::SchedulerHandle;
 use libc::c_int;
+use runtime::fail::Fail;
+use runtime::queue::{IoQueueDescriptor, IoQueueTable, IoQueueType};
+use runtime::types::{dmtr_qresult_t, dmtr_sgarray_t};
 use std::time::Instant;
 
 #[cfg(feature = "profiler")]
@@ -394,7 +395,7 @@ impl<RT: Runtime> LibOS<RT> {
             return None;
         }
         let (qd, r) = self.take_operation(handle);
-        Some(dmtr_qresult_t::pack(&self.rt, r, qd, qt))
+        Some(pack_result(&self.rt, r, qd, qt))
     }
 
     /// Block until request represented by `qt` is finished returning the results of this request.
@@ -403,7 +404,7 @@ impl<RT: Runtime> LibOS<RT> {
         timer!("catnip::wait");
         trace!("wait(): qt={:?}", qt);
         let (qd, result) = self.wait2(qt);
-        dmtr_qresult_t::pack(&self.rt, result, qd, qt)
+        pack_result(&self.rt, result, qd, qt)
     }
 
     /// Block until request represented by `qt` is finished returning the file descriptor
@@ -456,7 +457,7 @@ impl<RT: Runtime> LibOS<RT> {
                 let handle = self.rt.scheduler().from_raw_handle(qt).unwrap();
                 if handle.has_completed() {
                     let (qd, r) = self.take_operation(handle);
-                    return (i, dmtr_qresult_t::pack(&self.rt, r, qd, qt));
+                    return (i, pack_result(&self.rt, r, qd, qt));
                 }
                 handle.into_raw();
             }

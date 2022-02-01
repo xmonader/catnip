@@ -2,13 +2,13 @@
 // // Licensed under the MIT license.
 
 use crate::{
-    collections::bytes::BytesMut,
-    fail::Fail,
     protocols::{ip, ipv4::Ipv4Endpoint},
-    queue::IoQueueDescriptor,
     test_helpers,
 };
 use futures::task::{noop_waker_ref, Context};
+use runtime::fail::Fail;
+use runtime::memory::BytesMut;
+use runtime::queue::IoQueueDescriptor;
 use std::{
     convert::TryFrom,
     future::Future,

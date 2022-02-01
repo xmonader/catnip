@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 use crate::{
-    collections::bytes::{Bytes, BytesMut},
     protocols::{
         ip::{self},
         ipv4::Ipv4Endpoint,
@@ -15,13 +14,14 @@ use crate::{
             SeqNumber,
         },
     },
-    queue::IoQueueDescriptor,
     runtime::Runtime,
     test_helpers::Engine,
     test_helpers::{self, TestRuntime},
 };
 use futures::task::noop_waker_ref;
 use rand;
+use runtime::memory::{Bytes, BytesMut};
+use runtime::queue::IoQueueDescriptor;
 use std::{
     collections::VecDeque,
     convert::TryFrom,

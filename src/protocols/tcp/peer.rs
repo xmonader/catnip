@@ -6,7 +6,6 @@ use super::{
     passive_open::PassiveSocket,
 };
 use crate::{
-    fail::Fail,
     protocols::{
         arp::ArpPeer,
         ethernet2::{EtherType2, Ethernet2Header},
@@ -18,11 +17,12 @@ use crate::{
             segment::{TcpHeader, TcpSegment},
         },
     },
-    queue::IoQueueDescriptor,
     runtime::Runtime,
-    runtime::RuntimeBuf,
 };
 use futures::channel::mpsc;
+use runtime::fail::Fail;
+use runtime::queue::IoQueueDescriptor;
+use runtime::RuntimeBuf;
 use std::collections::HashMap;
 use std::{
     cell::RefCell,

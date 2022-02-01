@@ -6,21 +6,18 @@
 #![feature(const_mut_refs, const_type_name)]
 #![feature(maybe_uninit_uninit_array, maybe_uninit_extra, maybe_uninit_ref)]
 
+mod common;
+
+use crate::common::libos::*;
+use crate::common::{arp, ALICE_IPV4, ALICE_MAC, BOB_IPV4, BOB_MAC, PORT_BASE};
 use catnip::{
-    interop::dmtr_opcode_t,
     protocols::{ip, ipv4::Ipv4Endpoint},
     runtime::Runtime,
 };
-
 use crossbeam_channel::{self};
-
 use libc;
-
+use runtime::types::dmtr_opcode_t;
 use std::{convert::TryFrom, thread};
-
-mod common;
-use common::libos::*;
-use common::*;
 
 //==============================================================================
 // Connect

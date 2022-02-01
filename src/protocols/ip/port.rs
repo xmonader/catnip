@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::fail::Fail;
+use runtime::fail::Fail;
 use std::{convert::TryFrom, num::NonZeroU16};
 
 //==============================================================================

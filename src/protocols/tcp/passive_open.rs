@@ -3,7 +3,6 @@
 
 use super::{constants::FALLBACK_MSS, established::ControlBlock, isn_generator::IsnGenerator};
 use crate::{
-    fail::Fail,
     protocols::{
         arp::ArpPeer,
         ethernet2::{EtherType2, Ethernet2Header},
@@ -15,9 +14,10 @@ use crate::{
         },
     },
     runtime::Runtime,
-    runtime::RuntimeBuf,
 };
 use catwalk::SchedulerHandle;
+use runtime::fail::Fail;
+use runtime::RuntimeBuf;
 use std::collections::{HashMap, HashSet};
 use std::{
     cell::RefCell,

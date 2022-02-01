@@ -8,7 +8,6 @@ use super::{
     socket::UdpSocket,
 };
 use crate::{
-    fail::Fail,
     protocols::{
         arp::ArpPeer,
         ethernet2::{
@@ -17,11 +16,12 @@ use crate::{
         ipv4::Ipv4Endpoint,
         ipv4::{Ipv4Header, Ipv4Protocol2},
     },
-    queue::IoQueueDescriptor,
     runtime::Runtime,
 };
 use catwalk::SchedulerHandle;
 use futures::{channel::mpsc, stream::StreamExt};
+use runtime::fail::Fail;
+use runtime::queue::IoQueueDescriptor;
 use std::collections::HashMap;
 
 #[cfg(feature = "profiler")]

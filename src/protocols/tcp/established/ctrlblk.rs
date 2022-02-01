@@ -6,10 +6,8 @@ use super::{
     sender::Sender,
     sender::{congestion_ctrl::CongestionControlConstructor, UnackedSegment},
 };
-
 use crate::{
     collections::watched::{WatchFuture, WatchedValue},
-    fail::Fail,
     protocols::{
         arp::ArpPeer,
         ethernet2::{
@@ -24,6 +22,7 @@ use crate::{
     },
     runtime::Runtime,
 };
+use runtime::fail::Fail;
 
 use std::{
     cell::RefCell,

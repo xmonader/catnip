@@ -2,9 +2,11 @@
 // Licensed under the MIT license.
 
 use crate::{
-    fail::Fail, futures::result::FutureResult, operations::OperationResult,
-    protocols::udp::UdpPopFuture, queue::IoQueueDescriptor, runtime::Runtime,
+    futures::result::FutureResult, operations::OperationResult, protocols::udp::UdpPopFuture,
+    runtime::Runtime,
 };
+use runtime::fail::Fail;
+use runtime::queue::IoQueueDescriptor;
 use std::{
     future::Future,
     pin::Pin,

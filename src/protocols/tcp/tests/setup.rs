@@ -2,8 +2,6 @@
 // Licensed under the MIT license.
 
 use crate::{
-    collections::bytes::{Bytes, BytesMut},
-    fail::Fail,
     protocols::{
         ethernet2::{EtherType2, Ethernet2Header, MacAddress},
         ip::{self, Port},
@@ -14,12 +12,15 @@ use crate::{
             SeqNumber,
         },
     },
-    queue::IoQueueDescriptor,
-    runtime::{PacketBuf, Runtime, RuntimeBuf},
+    runtime::{PacketBuf, Runtime},
     test_helpers::Engine,
     test_helpers::{self, TestRuntime},
 };
 use futures::task::noop_waker_ref;
+use runtime::fail::Fail;
+use runtime::memory::{Bytes, BytesMut};
+use runtime::queue::IoQueueDescriptor;
+use runtime::RuntimeBuf;
 use std::{
     convert::TryFrom,
     future::Future,

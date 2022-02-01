@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::fail::Fail;
 use eui48;
+use runtime::fail::Fail;
 use std::fmt;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]

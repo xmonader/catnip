@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::{
-    fail::Fail, protocols::ipv4::Ipv4Endpoint, queue::IoQueueDescriptor, runtime::Runtime,
-};
+use crate::{protocols::ipv4::Ipv4Endpoint, runtime::Runtime};
+use runtime::fail::Fail;
+use runtime::queue::IoQueueDescriptor;
 use std::fmt;
 
 //==============================================================================

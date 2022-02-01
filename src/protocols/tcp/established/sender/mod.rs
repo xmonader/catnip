@@ -7,12 +7,13 @@ mod rto;
 use super::ControlBlock;
 use crate::{
     collections::watched::{WatchFuture, WatchedValue},
-    fail::Fail,
     protocols::tcp::SeqNumber,
-    runtime::{Runtime, RuntimeBuf},
+    runtime::Runtime,
 };
 use congestion_ctrl as cc;
 use rto::RtoCalculator;
+use runtime::fail::Fail;
+use runtime::RuntimeBuf;
 use std::{
     boxed::Box,
     cell::RefCell,

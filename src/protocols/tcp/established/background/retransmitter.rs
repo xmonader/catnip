@@ -2,11 +2,12 @@
 // Licensed under the MIT license.
 
 use super::ControlBlock;
-use crate::{fail::Fail, runtime::Runtime};
+use crate::runtime::Runtime;
 use futures::{
     future::{self, Either},
     FutureExt,
 };
+use runtime::fail::Fail;
 use std::{rc::Rc, time::Duration};
 
 pub enum RetransmitCause {

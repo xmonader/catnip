@@ -11,9 +11,10 @@ use self::{
     sender::sender,
 };
 use super::{ControlBlock, State};
-use crate::{queue::IoQueueDescriptor, runtime::Runtime};
+use crate::runtime::Runtime;
 use futures::channel::mpsc;
 use futures::FutureExt;
+use runtime::queue::IoQueueDescriptor;
 use std::{future::Future, rc::Rc};
 
 pub type BackgroundFuture<RT> = impl Future<Output = ()>;

@@ -2,9 +2,7 @@
 // Licensed under the MIT license.
 
 use crate::{
-    collections::bytes::{Bytes, BytesMut},
     futures::operation::FutureOperation,
-    interop::{dmtr_sgarray_t, dmtr_sgaseg_t},
     logging,
     protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp, udp},
     runtime::{PacketBuf, Runtime, RECEIVE_BATCH_SIZE},
@@ -20,6 +18,8 @@ use rand::{
     seq::SliceRandom,
     Rng, SeedableRng,
 };
+use runtime::memory::{Bytes, BytesMut};
+use runtime::types::{dmtr_sgarray_t, dmtr_sgaseg_t};
 use std::{
     cell::RefCell,
     collections::VecDeque,

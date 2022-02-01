@@ -1,11 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::{
-    fail::Fail, protocols::ethernet2::EtherType2, protocols::ethernet2::MacAddress,
-    runtime::RuntimeBuf,
-};
+use crate::{protocols::ethernet2::EtherType2, protocols::ethernet2::MacAddress};
 use byteorder::{ByteOrder, NetworkEndian};
+use runtime::fail::Fail;
+use runtime::RuntimeBuf;
 use std::convert::{TryFrom, TryInto};
 
 pub const ETHERNET2_HEADER_SIZE: usize = 14;

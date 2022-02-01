@@ -3,7 +3,8 @@
 
 use super::super::super::SeqNumber;
 use super::super::{ctrlblk::ControlBlock, sender::UnackedSegment};
-use crate::{fail::Fail, runtime::Runtime};
+use runtime::fail::Fail;
+use crate::{runtime::Runtime};
 use futures::FutureExt;
 use std::{cmp, rc::Rc, time::Duration};
 

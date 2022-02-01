@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 use crate::{
-    fail::Fail,
     protocols::{
         arp::ArpPeer,
         icmpv4::Icmpv4Peer,
@@ -12,10 +11,11 @@ use crate::{
     },
     runtime::Runtime,
 };
+use runtime::fail::Fail;
 use std::{future::Future, net::Ipv4Addr, time::Duration};
 
 #[cfg(test)]
-use crate::queue::IoQueueDescriptor;
+use runtime::queue::IoQueueDescriptor;
 
 pub struct Peer<RT: Runtime> {
     rt: RT,

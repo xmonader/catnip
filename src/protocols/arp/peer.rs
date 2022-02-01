@@ -5,7 +5,6 @@ use super::{
     cache::ArpCache, config::ArpConfig, packet::ArpHeader, packet::ArpMessage, packet::ArpOperation,
 };
 use crate::{
-    fail::Fail,
     futures::UtilityMethods,
     protocols::ethernet2::{
         MacAddress, {EtherType2, Ethernet2Header},
@@ -17,6 +16,7 @@ use futures::{
     channel::oneshot::{channel, Receiver, Sender},
     FutureExt,
 };
+use runtime::fail::Fail;
 use std::{
     cell::RefCell,
     collections::HashMap,

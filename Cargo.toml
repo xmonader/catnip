@@ -15,7 +15,6 @@ async-trait = "0.1.52"
 byteorder = "1.4.3"
 crc = "1.8.1"
 crossbeam-channel = "0.5.2"
-custom_error = "1.9.2"
 derive_more = "0.99.17"
 either = "1.6.1"
 eui48 = "1.1.0"
@@ -27,9 +26,9 @@ log = "0.4.14"
 num-derive = "0.3.3"
 num-traits = "0.2.14"
 rand = { version = "0.8.4", features = ["small_rng"] }
-slab = "0.4.5"
 
 perftools = { git = "https://github.com/demikernel/perftools", rev = "10740b3c46440f4eef740c401d8fd2385998c16a" }
+runtime = { git = "https://github.com/demikernel/runtime", rev = "39d5f4e979de3f2372a72c6dea33befb6a9cea38"}
 catwalk= { git = "https://github.com/demikernel/catwalk", rev = "9e8d33a199ecfa0c4cbe41e8b83fa3ef6d7793e7"}
 
 [dev-dependencies]

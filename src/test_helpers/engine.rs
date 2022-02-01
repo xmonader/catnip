@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 use crate::{
-    fail::Fail,
     protocols::{
         arp::ArpPeer,
         ethernet2::{
@@ -13,10 +12,10 @@ use crate::{
         udp::UdpPopFuture,
         Peer,
     },
-    queue::IoQueueType,
-    queue::{IoQueueDescriptor, IoQueueTable},
     runtime::Runtime,
 };
+use runtime::fail::Fail;
+use runtime::queue::{IoQueueDescriptor, IoQueueTable, IoQueueType};
 
 use std::{collections::HashMap, future::Future, net::Ipv4Addr, time::Duration};
 pub struct Engine<RT: Runtime> {

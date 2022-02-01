@@ -4,10 +4,7 @@
 use arrayvec::ArrayVec;
 
 use catnip::{
-    collections::bytes::{Bytes, BytesMut},
     futures::operation::FutureOperation,
-    interop::dmtr_sgarray_t,
-    interop::dmtr_sgaseg_t,
     protocols::ethernet2::MacAddress,
     protocols::{arp::ArpConfig, tcp, udp},
     runtime::Runtime,
@@ -23,6 +20,8 @@ use rand::{
     seq::SliceRandom,
     Rng, SeedableRng,
 };
+use runtime::memory::{Bytes, BytesMut};
+use runtime::types::{dmtr_sgarray_t, dmtr_sgaseg_t};
 use std::{
     cell::RefCell,
     collections::HashMap,

@@ -2,10 +2,9 @@
 // Licensed under the MIT license.
 
 use super::peer::{Inner, TcpPeer};
-use crate::{
-    fail::Fail, futures::result::FutureResult, operations::OperationResult,
-    queue::IoQueueDescriptor, runtime::Runtime,
-};
+use crate::{futures::result::FutureResult, operations::OperationResult, runtime::Runtime};
+use runtime::fail::Fail;
+use runtime::queue::IoQueueDescriptor;
 use std::{
     cell::RefCell,
     fmt,

@@ -1,15 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::{
-    fail::Fail,
-    protocols::{
-        ip,
-        ipv4::{Ipv4Header, Ipv4Protocol2},
-    },
-    runtime::RuntimeBuf,
+use crate::protocols::{
+    ip,
+    ipv4::{Ipv4Header, Ipv4Protocol2},
 };
 use byteorder::{ByteOrder, NetworkEndian};
+use runtime::fail::Fail;
+use runtime::RuntimeBuf;
 use std::convert::{TryFrom, TryInto};
 
 //==============================================================================

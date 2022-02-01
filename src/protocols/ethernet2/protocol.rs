@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::fail::Fail;
 use num_traits::FromPrimitive;
+use runtime::fail::Fail;
 use std::convert::TryFrom;
 
 #[repr(u16)]

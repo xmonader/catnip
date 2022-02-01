@@ -4,8 +4,8 @@
 pub mod engine;
 pub mod runtime;
 
+pub use self::runtime::TestRuntime;
 pub use engine::Engine;
-pub use runtime::TestRuntime;
 
 use crate::protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp, udp};
 use std::{
