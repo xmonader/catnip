@@ -58,7 +58,7 @@ pub struct TestRuntime {
     ipv4_addr: Ipv4Addr,
     arp_options: ArpConfig,
     udp_options: udp::UdpConfig,
-    tcp_options: tcp::Options<TestRuntime>,
+    tcp_options: tcp::Options,
     inner: Rc<RefCell<Inner>>,
     scheduler: Scheduler<FutureOperation<TestRuntime>>,
 }
@@ -73,7 +73,7 @@ impl TestRuntime {
         now: Instant,
         arp_options: ArpConfig,
         udp_options: udp::UdpConfig,
-        tcp_options: tcp::Options<TestRuntime>,
+        tcp_options: tcp::Options,
         link_addr: MacAddress,
         ipv4_addr: Ipv4Addr,
     ) -> Self {
@@ -215,7 +215,7 @@ impl Runtime for TestRuntime {
         self.ipv4_addr
     }
 
-    fn tcp_options(&self) -> tcp::Options<TestRuntime> {
+    fn tcp_options(&self) -> tcp::Options {
         self.tcp_options.clone()
     }
 

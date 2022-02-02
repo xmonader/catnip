@@ -54,7 +54,7 @@ pub trait Runtime: Clone + Unpin + 'static {
     fn local_link_addr(&self) -> MacAddress;
     fn local_ipv4_addr(&self) -> Ipv4Addr;
     fn arp_options(&self) -> ArpConfig;
-    fn tcp_options(&self) -> tcp::Options<Self>;
+    fn tcp_options(&self) -> tcp::Options;
     fn udp_options(&self) -> udp::UdpConfig;
 
     fn wait(&self, duration: Duration) -> Self::WaitFuture;
