@@ -8,8 +8,8 @@ use catnip::{
     futures::operation::FutureOperation,
     interop::dmtr_sgarray_t,
     interop::dmtr_sgaseg_t,
-    protocols::ethernet2::MacAddress,
-    protocols::{arp::ArpConfig, tcp, udp},
+    protocols::{arp::ArpConfig, udp},
+    protocols::{ethernet2::MacAddress, tcp::TcpConfig},
     runtime::Runtime,
     runtime::{PacketBuf, RECEIVE_BATCH_SIZE},
     timer::{Timer, TimerRc},
@@ -53,7 +53,7 @@ struct Inner {
 
     link_addr: MacAddress,
     ipv4_addr: Ipv4Addr,
-    tcp_options: tcp::Options<DummyRuntime>,
+    tcp_options: TcpConfig,
     arp_options: ArpConfig,
 }
 
@@ -85,7 +85,7 @@ impl DummyRuntime {
             outgoing,
             link_addr,
             ipv4_addr,
-            tcp_options: tcp::Options::default(),
+            tcp_options: TcpConfig::default(),
             arp_options,
         };
         Self {
@@ -201,7 +201,7 @@ impl Runtime for DummyRuntime {
         self.inner.borrow().ipv4_addr.clone()
     }
 
-    fn tcp_options(&self) -> tcp::Options<Self> {
+    fn tcp_options(&self) -> TcpConfig {
         self.inner.borrow().tcp_options.clone()
     }
 

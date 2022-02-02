@@ -1,24 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::{
-    protocols::tcp::{
-        constants::{DEFAULT_MSS, MAX_MSS, MIN_MSS},
-        established::cc::{self, CongestionControl, CongestionControlConstructor},
-    },
-    runtime::Runtime,
-};
+use crate::protocols::tcp::constants::{DEFAULT_MSS, MAX_MSS, MIN_MSS};
 use std::time::Duration;
 
 /// Options for TCP Stack
 #[derive(Clone, Debug)]
-pub struct TcpOptions<RT: Runtime> {
+pub struct TcpConfig {
     /// Maximum Segment Size
     advertised_mss: usize,
-    /// Congestion Control Type
-    congestion_ctrl_type: CongestionControlConstructor<RT>,
-    /// Options for Congestion Control Algorithm
-    congestion_ctrl_options: Option<cc::Options>,
     /// Number of Retries for TCP Handshake Algorithm
     handshake_retries: usize,
     /// Timeout for TCP Handshake Algorithm
@@ -35,12 +25,10 @@ pub struct TcpOptions<RT: Runtime> {
     tx_checksum_offload: bool,
 }
 
-impl<RT: Runtime> Default for TcpOptions<RT> {
+impl Default for TcpConfig {
     fn default() -> Self {
-        TcpOptions {
+        TcpConfig {
             advertised_mss: DEFAULT_MSS,
-            congestion_ctrl_type: cc::None::new,
-            congestion_ctrl_options: None,
             handshake_retries: 5,
             handshake_timeout: Duration::from_secs(3),
             receive_window_size: 0xffff,
@@ -52,11 +40,9 @@ impl<RT: Runtime> Default for TcpOptions<RT> {
     }
 }
 
-impl<RT: Runtime> TcpOptions<RT> {
+impl TcpConfig {
     pub fn new(
         advertised_mss: Option<usize>,
-        congestion_ctrl_type: Option<CongestionControlConstructor<RT>>,
-        congestion_ctrl_options: Option<cc::Options>,
         handshake_retries: Option<usize>,
         handshake_timeout: Option<Duration>,
         receive_window_size: Option<u16>,
@@ -69,12 +55,6 @@ impl<RT: Runtime> TcpOptions<RT> {
 
         if let Some(value) = advertised_mss {
             options = options.set_advertised_mss(value);
-        }
-        if let Some(value) = congestion_ctrl_type {
-            options = options.set_congestion_ctrl_type(value);
-        }
-        if let Some(value) = congestion_ctrl_options {
-            options = options.set_congestion_ctrl_options(value);
         }
         if let Some(value) = handshake_retries {
             options = options.set_handshake_retries(value);
@@ -103,14 +83,6 @@ impl<RT: Runtime> TcpOptions<RT> {
 
     pub fn advertised_mss(&self) -> usize {
         self.advertised_mss
-    }
-
-    pub fn congestion_ctrl_type(&self) -> CongestionControlConstructor<RT> {
-        self.congestion_ctrl_type
-    }
-
-    pub fn congestion_ctrl_options(&self) -> Option<cc::Options> {
-        self.congestion_ctrl_options.clone()
     }
 
     pub fn handshake_retries(&self) -> usize {
@@ -145,16 +117,6 @@ impl<RT: Runtime> TcpOptions<RT> {
         assert!(value >= MIN_MSS);
         assert!(value <= MAX_MSS);
         self.advertised_mss = value;
-        self
-    }
-
-    fn set_congestion_ctrl_type(mut self, value: CongestionControlConstructor<RT>) -> Self {
-        self.congestion_ctrl_type = value;
-        self
-    }
-
-    fn set_congestion_ctrl_options(mut self, value: cc::Options) -> Self {
-        self.congestion_ctrl_options = Some(value);
         self
     }
 

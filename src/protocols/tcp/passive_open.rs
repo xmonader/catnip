@@ -10,6 +10,7 @@ use crate::{
         ipv4::Ipv4Endpoint,
         ipv4::{Ipv4Header, Ipv4Protocol2},
         tcp::{
+            established::cc::{self, CongestionControl},
             segment::{TcpHeader, TcpOptions2, TcpSegment},
             SeqNumber,
         },
@@ -183,8 +184,8 @@ impl<RT: Runtime> PassiveSocket<RT> {
                 remote_window_size,
                 remote_window_scale,
                 mss,
-                tcp_options.congestion_ctrl_type(),
-                tcp_options.congestion_ctrl_options(),
+                cc::None::new,
+                None,
             );
             self.ready.borrow_mut().push_ok(cb);
             return Ok(());

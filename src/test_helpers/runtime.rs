@@ -6,7 +6,7 @@ use crate::{
     futures::operation::FutureOperation,
     interop::{dmtr_sgarray_t, dmtr_sgaseg_t},
     logging,
-    protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp, udp},
+    protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp::TcpConfig, udp},
     runtime::{PacketBuf, Runtime, RECEIVE_BATCH_SIZE},
     test_helpers::Engine,
     timer::{Timer, TimerRc},
@@ -58,7 +58,7 @@ pub struct TestRuntime {
     ipv4_addr: Ipv4Addr,
     arp_options: ArpConfig,
     udp_options: udp::UdpConfig,
-    tcp_options: tcp::Options<TestRuntime>,
+    tcp_options: TcpConfig,
     inner: Rc<RefCell<Inner>>,
     scheduler: Scheduler<FutureOperation<TestRuntime>>,
 }
@@ -73,7 +73,7 @@ impl TestRuntime {
         now: Instant,
         arp_options: ArpConfig,
         udp_options: udp::UdpConfig,
-        tcp_options: tcp::Options<TestRuntime>,
+        tcp_options: TcpConfig,
         link_addr: MacAddress,
         ipv4_addr: Ipv4Addr,
     ) -> Self {
@@ -215,7 +215,7 @@ impl Runtime for TestRuntime {
         self.ipv4_addr
     }
 
-    fn tcp_options(&self) -> tcp::Options<TestRuntime> {
+    fn tcp_options(&self) -> TcpConfig {
         self.tcp_options.clone()
     }
 

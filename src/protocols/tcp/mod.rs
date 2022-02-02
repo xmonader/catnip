@@ -16,6 +16,6 @@ mod sequence_number;
 mod tests;
 
 pub use self::{
-    established::cc, options::TcpOptions as Options, peer::TcpPeer, segment::MAX_TCP_HEADER_SIZE,
+    established::cc, options::TcpConfig, peer::TcpPeer, segment::MAX_TCP_HEADER_SIZE,
     segment::MIN_TCP_HEADER_SIZE, sequence_number::SeqNumber,
 };
