@@ -52,7 +52,11 @@ impl<RT: Runtime> Future for FutureOperation<RT> {
     }
 }
 
-impl<T: Into<TcpOperation<RT>>, RT: Runtime> From<T> for FutureOperation<RT> {
+impl<T, RT> From<T> for FutureOperation<RT>
+where
+    RT: Runtime,
+    T: Into<TcpOperation<RT>>,
+{
     fn from(f: T) -> Self {
         FutureOperation::Tcp(f.into())
     }

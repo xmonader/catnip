@@ -1,9 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
-use crate::{
-    futures::operation::FutureOperation,
-    protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp, udp},
-};
+use crate::protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp, udp};
 use arrayvec::ArrayVec;
 use catwalk::{Scheduler, SchedulerHandle};
 use rand::distributions::{Distribution, Standard};
@@ -45,11 +42,15 @@ pub trait SchedulerRuntime {
     fn spawn<F: Future<Output = ()> + 'static>(&self, future: F) -> SchedulerHandle;
 }
 
-/// Common interface that transport layers should implement? E.g. DPDK and RDMA.
-pub trait Runtime: Clone + Unpin + SchedulerRuntime + MemoryRuntime + 'static {
+pub trait CommunicationRuntime: MemoryRuntime {
     fn transmit(&self, pkt: impl PacketBuf<Self::Buf>);
     fn receive(&self) -> ArrayVec<Self::Buf, RECEIVE_BATCH_SIZE>;
+}
 
+/// Common interface that transport layers should implement? E.g. DPDK and RDMA.
+pub trait Runtime:
+    Clone + Unpin + CommunicationRuntime + SchedulerRuntime + MemoryRuntime + 'static
+{
     fn local_link_addr(&self) -> MacAddress;
     fn local_ipv4_addr(&self) -> Ipv4Addr;
     fn arp_options(&self) -> ArpConfig;
@@ -61,5 +62,5 @@ pub trait Runtime: Clone + Unpin + SchedulerRuntime + MemoryRuntime + 'static {
         Standard: Distribution<T>;
     fn rng_shuffle<T>(&self, slice: &mut [T]);
 
-    fn scheduler(&self) -> &Scheduler<FutureOperation<Self>>;
+    fn scheduler(&self) -> &Scheduler;
 }

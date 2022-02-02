@@ -5,7 +5,10 @@ use crate::{
     futures::operation::FutureOperation,
     logging,
     protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp, udp},
-    runtime::{MemoryRuntime, PacketBuf, Runtime, SchedulerRuntime, RECEIVE_BATCH_SIZE},
+    runtime::{
+        CommunicationRuntime, MemoryRuntime, PacketBuf, Runtime, SchedulerRuntime,
+        RECEIVE_BATCH_SIZE,
+    },
     test_helpers::Engine,
     timer::{Timer, TimerRc},
 };
@@ -60,7 +63,7 @@ pub struct TestRuntime {
     udp_options: udp::UdpConfig,
     tcp_options: tcp::Options<TestRuntime>,
     inner: Rc<RefCell<Inner>>,
-    scheduler: Scheduler<FutureOperation<TestRuntime>>,
+    scheduler: Scheduler,
 }
 
 //==============================================================================
@@ -210,11 +213,13 @@ impl SchedulerRuntime for TestRuntime {
 
     fn spawn<F: Future<Output = ()> + 'static>(&self, future: F) -> SchedulerHandle {
         self.scheduler
-            .insert(FutureOperation::Background(future.boxed_local()))
+            .insert(Box::new(FutureOperation::Background::<TestRuntime>(
+                future.boxed_local(),
+            )))
     }
 }
 
-impl Runtime for TestRuntime {
+impl CommunicationRuntime for TestRuntime {
     fn transmit(&self, pkt: impl PacketBuf<Bytes>) {
         let header_size = pkt.header_size();
         let body_size = pkt.body_size();
@@ -234,8 +239,10 @@ impl Runtime for TestRuntime {
         }
         out
     }
+}
 
-    fn scheduler(&self) -> &Scheduler<FutureOperation<Self>> {
+impl Runtime for TestRuntime {
+    fn scheduler(&self) -> &Scheduler {
         &self.scheduler
     }
 

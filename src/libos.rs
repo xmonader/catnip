@@ -190,7 +190,7 @@ impl<RT: Runtime> LibOS<RT> {
             _ => Err(Fail::BadFileDescriptor {}),
         };
         match r {
-            Ok(future) => Ok(self.rt.scheduler().insert(future).into_raw()),
+            Ok(future) => Ok(self.rt.scheduler().insert(Box::new(future)).into_raw()),
             Err(fail) => Err(fail),
         }
     }
@@ -218,7 +218,7 @@ impl<RT: Runtime> LibOS<RT> {
             _ => Err(Fail::BadFileDescriptor {}),
         }?;
 
-        Ok(self.rt.scheduler().insert(future).into_raw())
+        Ok(self.rt.scheduler().insert(Box::new(future)).into_raw())
     }
 
     ///
@@ -278,7 +278,7 @@ impl<RT: Runtime> LibOS<RT> {
             });
         }
         let future = self.do_push(fd, buf)?;
-        Ok(self.rt.scheduler().insert(future).into_raw())
+        Ok(self.rt.scheduler().insert(Box::new(future)).into_raw())
     }
 
     /// Similar to [push](Self::push) but uses a [Runtime]-specific buffer instead of the
@@ -293,7 +293,7 @@ impl<RT: Runtime> LibOS<RT> {
             });
         }
         let future = self.do_push(fd, buf)?;
-        Ok(self.rt.scheduler().insert(future).into_raw())
+        Ok(self.rt.scheduler().insert(Box::new(future)).into_raw())
     }
 
     fn do_pushto(
@@ -326,7 +326,7 @@ impl<RT: Runtime> LibOS<RT> {
             });
         }
         let future = self.do_pushto(fd, buf, to)?;
-        Ok(self.rt.scheduler().insert(future).into_raw())
+        Ok(self.rt.scheduler().insert(Box::new(future)).into_raw())
     }
 
     pub fn pushto2(
@@ -343,7 +343,7 @@ impl<RT: Runtime> LibOS<RT> {
             });
         }
         let future = self.do_pushto(fd, buf, to)?;
-        Ok(self.rt.scheduler().insert(future).into_raw())
+        Ok(self.rt.scheduler().insert(Box::new(future)).into_raw())
     }
 
     ///
@@ -375,7 +375,7 @@ impl<RT: Runtime> LibOS<RT> {
             _ => Err(Fail::BadFileDescriptor {}),
         }?;
 
-        Ok(self.rt.scheduler().insert(future).into_raw())
+        Ok(self.rt.scheduler().insert(Box::new(future)).into_raw())
     }
 
     // If this returns a result, `qt` is no longer valid.
@@ -493,7 +493,17 @@ impl<RT: Runtime> LibOS<RT> {
         &mut self,
         handle: SchedulerHandle,
     ) -> (IoQueueDescriptor, OperationResult<RT>) {
-        match self.rt.scheduler().take(handle) {
+        let boxed_future: Box<dyn futures::Future<Output = ()> + Unpin> =
+            self.rt.scheduler().take(handle);
+        let any_future: Box<dyn std::any::Any> = Box::new(boxed_future);
+        let boxed_concrete_type: Box<FutureOperation<RT>> =
+            match any_future.downcast::<FutureOperation<RT>>() {
+                Err(_) => panic!(),
+                Ok(x) => x,
+            };
+        let concrete_type: FutureOperation<RT> = *boxed_concrete_type;
+
+        match concrete_type {
             FutureOperation::Tcp(f) => f.expect_result(),
             FutureOperation::Udp(f) => f.expect_result(),
             FutureOperation::Background(..) => {

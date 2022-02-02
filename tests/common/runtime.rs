@@ -7,7 +7,7 @@ use catnip::{
     futures::operation::FutureOperation,
     protocols::ethernet2::MacAddress,
     protocols::{arp::ArpConfig, tcp, udp},
-    runtime::{MemoryRuntime, Runtime, SchedulerRuntime},
+    runtime::{CommunicationRuntime, MemoryRuntime, Runtime, SchedulerRuntime},
     runtime::{PacketBuf, RECEIVE_BATCH_SIZE},
     timer::{Timer, TimerRc},
 };
@@ -41,7 +41,7 @@ use std::{
 #[derive(Clone)]
 pub struct DummyRuntime {
     inner: Rc<RefCell<Inner>>,
-    scheduler: Scheduler<FutureOperation<DummyRuntime>>,
+    scheduler: Scheduler,
 }
 
 struct Inner {
@@ -191,11 +191,13 @@ impl SchedulerRuntime for DummyRuntime {
 
     fn spawn<F: Future<Output = ()> + 'static>(&self, future: F) -> SchedulerHandle {
         self.scheduler
-            .insert(FutureOperation::Background(future.boxed_local()))
+            .insert(Box::new(FutureOperation::Background::<DummyRuntime>(
+                future.boxed_local(),
+            )))
     }
 }
 
-impl Runtime for DummyRuntime {
+impl CommunicationRuntime for DummyRuntime {
     fn transmit(&self, pkt: impl PacketBuf<Bytes>) {
         let header_size = pkt.header_size();
         let body_size = pkt.body_size();
@@ -219,8 +221,10 @@ impl Runtime for DummyRuntime {
         }
         out
     }
+}
 
-    fn scheduler(&self) -> &Scheduler<FutureOperation<Self>> {
+impl Runtime for DummyRuntime {
+    fn scheduler(&self) -> &Scheduler {
         &self.scheduler
     }
 

@@ -29,7 +29,7 @@ rand = { version = "0.8.4", features = ["small_rng"] }
 
 perftools = { git = "https://github.com/demikernel/perftools", rev = "10740b3c46440f4eef740c401d8fd2385998c16a" }
 runtime = { git = "https://github.com/demikernel/runtime", rev = "39d5f4e979de3f2372a72c6dea33befb6a9cea38"}
-catwalk= { git = "https://github.com/demikernel/catwalk", rev = "9e8d33a199ecfa0c4cbe41e8b83fa3ef6d7793e7"}
+catwalk= { git = "https://github.com/demikernel/catwalk", rev = "771ebb4f04692cf49b58dd84e6c31d4f817069d0"}
 
 [dev-dependencies]
 criterion = "0.3.4"
