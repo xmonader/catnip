@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-use crate::protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp, udp::UdpConfig};
+use crate::protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp::TcpOptions, udp::UdpConfig};
 use rand::{thread_rng, Rng};
 use std::net::Ipv4Addr;
 
@@ -11,7 +11,7 @@ pub struct Options {
     pub my_ipv4_addr: Ipv4Addr,
     pub my_link_addr: MacAddress,
     pub rng_seed: [u8; 32],
-    pub tcp: tcp::Options,
+    pub tcp: TcpOptions,
     pub udp: UdpConfig,
 }
 
@@ -24,7 +24,7 @@ impl Default for Options {
             my_ipv4_addr: Ipv4Addr::new(0, 0, 0, 0),
             my_link_addr: MacAddress::nil(),
             rng_seed,
-            tcp: tcp::Options::default(),
+            tcp: TcpOptions::default(),
             udp: Default::default(),
         }
     }
@@ -55,7 +55,7 @@ impl Options {
         self
     }
 
-    pub fn tcp(mut self, value: tcp::Options) -> Self {
+    pub fn tcp(mut self, value: TcpOptions) -> Self {
         self.tcp = value;
         self
     }
