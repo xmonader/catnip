@@ -7,7 +7,7 @@ pub mod runtime;
 pub use engine::Engine;
 pub use runtime::TestRuntime;
 
-use crate::protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp::TcpOptions, udp};
+use crate::protocols::{arp::ArpConfig, ethernet2::MacAddress, tcp::TcpConfig, udp};
 use std::{
     collections::HashMap,
     net::Ipv4Addr,
@@ -45,7 +45,7 @@ pub fn new_alice(now: Instant) -> Engine<TestRuntime> {
         false,
     );
     let udp_options = udp::UdpConfig::default();
-    let tcp_options = TcpOptions::default();
+    let tcp_options = TcpConfig::default();
     let rt = TestRuntime::new(
         "alice",
         now,
@@ -67,7 +67,7 @@ pub fn new_bob(now: Instant) -> Engine<TestRuntime> {
         false,
     );
     let udp_options = udp::UdpConfig::default();
-    let tcp_options = TcpOptions::default();
+    let tcp_options = TcpConfig::default();
     let rt = TestRuntime::new(
         "bob",
         now,
@@ -92,7 +92,7 @@ pub fn new_alice2(now: Instant) -> Engine<TestRuntime> {
         false,
     );
     let udp_options = udp::UdpConfig::default();
-    let tcp_options = TcpOptions::default();
+    let tcp_options = TcpConfig::default();
     let rt = TestRuntime::new(
         "alice",
         now,
@@ -117,7 +117,7 @@ pub fn new_bob2(now: Instant) -> Engine<TestRuntime> {
         false,
     );
     let udp_options = udp::UdpConfig::default();
-    let tcp_options = TcpOptions::default();
+    let tcp_options = TcpConfig::default();
     let rt = TestRuntime::new(
         "bob",
         now,
@@ -139,7 +139,7 @@ pub fn new_carrie(now: Instant) -> Engine<TestRuntime> {
         false,
     );
     let udp_options = udp::UdpConfig::default();
-    let tcp_options = TcpOptions::default();
+    let tcp_options = TcpConfig::default();
 
     let rt = TestRuntime::new(
         "carrie",

@@ -6,7 +6,7 @@ use std::time::Duration;
 
 /// Options for TCP Stack
 #[derive(Clone, Debug)]
-pub struct TcpOptions {
+pub struct TcpConfig {
     /// Maximum Segment Size
     advertised_mss: usize,
     /// Number of Retries for TCP Handshake Algorithm
@@ -25,9 +25,9 @@ pub struct TcpOptions {
     tx_checksum_offload: bool,
 }
 
-impl Default for TcpOptions {
+impl Default for TcpConfig {
     fn default() -> Self {
-        TcpOptions {
+        TcpConfig {
             advertised_mss: DEFAULT_MSS,
             handshake_retries: 5,
             handshake_timeout: Duration::from_secs(3),
@@ -40,7 +40,7 @@ impl Default for TcpOptions {
     }
 }
 
-impl TcpOptions {
+impl TcpConfig {
     pub fn new(
         advertised_mss: Option<usize>,
         handshake_retries: Option<usize>,
