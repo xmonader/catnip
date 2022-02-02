@@ -9,7 +9,10 @@ use crate::{
         ethernet2::{EtherType2, Ethernet2Header},
         ipv4::Ipv4Endpoint,
         ipv4::{Ipv4Header, Ipv4Protocol2},
-        tcp::segment::{TcpHeader, TcpOptions2, TcpSegment},
+        tcp::{
+            established::cc::{self, CongestionControl},
+            segment::{TcpHeader, TcpOptions2, TcpSegment},
+        },
     },
     runtime::{Runtime, RuntimeBuf},
 };
@@ -209,8 +212,8 @@ impl<RT: Runtime> ActiveOpenSocket<RT> {
             tx_window_size,
             remote_window_scale,
             mss,
-            tcp_options.congestion_ctrl_type(),
-            tcp_options.congestion_ctrl_options(),
+            cc::None::new,
+            None,
         );
         self.set_result(Ok(cb));
     }
